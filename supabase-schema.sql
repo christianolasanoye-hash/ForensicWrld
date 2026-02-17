@@ -98,3 +98,87 @@ INSERT INTO sections (slug, title, description, order_index) VALUES
   ('merch', 'Merch', 'View-only previews. No prices, no checkout, no purchases — just product cards and drop alerts.', 6)
 ON CONFLICT (slug) DO NOTHING;
 
+-- =====================================================
+-- SEO & SOCIAL SHARING SETTINGS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS seo_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Basic SEO
+  site_title TEXT NOT NULL DEFAULT 'Forensic Wrld',
+  site_description TEXT DEFAULT 'Creative agency for film, photography, and growth.',
+  site_keywords TEXT DEFAULT 'creative agency, film, photography, branding, social marketing',
+
+  -- Open Graph (Social Share)
+  og_title TEXT,
+  og_description TEXT,
+  og_image_url TEXT,
+  og_type TEXT DEFAULT 'website',
+
+  -- Twitter Card
+  twitter_card TEXT DEFAULT 'summary_large_image',
+  twitter_handle TEXT,
+  twitter_site TEXT,
+
+  -- Favicon & Icons
+  favicon_url TEXT,
+  apple_touch_icon_url TEXT,
+
+  -- Additional
+  canonical_url TEXT,
+  robots TEXT DEFAULT 'index, follow',
+  google_analytics_id TEXT,
+  google_site_verification TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE seo_settings ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access
+CREATE POLICY "Public can read SEO settings" ON seo_settings
+  FOR SELECT USING (true);
+
+-- Only authenticated users can update
+CREATE POLICY "Authenticated users can update SEO settings" ON seo_settings
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can insert SEO settings" ON seo_settings
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- Insert default settings
+INSERT INTO seo_settings (site_title, site_description)
+VALUES ('Forensic Wrld', 'Creative agency for film, photography, and growth. Minimal, premium, and built for momentum.')
+ON CONFLICT DO NOTHING;
+
+-- =====================================================
+-- SOCIAL LINKS TABLE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS social_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  platform TEXT NOT NULL,
+  url TEXT NOT NULL,
+  display_name TEXT,
+  icon TEXT,
+  order_index INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  show_in_header BOOLEAN DEFAULT false,
+  show_in_footer BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE social_links ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access
+CREATE POLICY "Public can read social links" ON social_links
+  FOR SELECT USING (true);
+
+-- Only authenticated users can manage
+CREATE POLICY "Authenticated users can manage social links" ON social_links
+  FOR ALL USING (auth.role() = 'authenticated');
+

@@ -20,6 +20,7 @@ const navItems = [
   { href: "/admin/newsletter", label: "Newsletter", icon: "◮" },
   { href: "/admin/outreach", label: "Outreach", icon: "◯" },
   { href: "/admin/links", label: "Social Links", icon: "◰" },
+  { href: "/admin/seo", label: "SEO & Social", icon: "◲" },
   { href: "/admin/settings", label: "Settings", icon: "◱" },
 ];
 

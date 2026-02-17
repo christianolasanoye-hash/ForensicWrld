@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase-client";
 import Input from "@/components/Input";
@@ -8,7 +8,7 @@ import Button from "@/components/Button";
 import Field from "@/components/Field";
 import SectionHeader from "@/components/SectionHeader";
 
-export default function AdminLoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -197,5 +197,19 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+          Loading...
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
