@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Forensic Wrld
 
-## Getting Started
+Creative agency website with full admin CMS.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Environment Variables
 
-## Learn More
+Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cp .env.example .env.local
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Required variables:
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon/public key
+- `ADMIN_EMAILS` - Comma-separated list of admin email addresses
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2. Create Admin User
 
-## Deploy on Vercel
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
+2. Navigate to **Authentication → Users → Add User**
+3. Create a user with email/password
+4. Add that email to `ADMIN_EMAILS` in your `.env.local`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Access Admin Panel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Go to `/admin/login` and sign in with your admin credentials.
+
+## Admin Dashboard
+
+The admin panel at `/admin` lets you manage:
+
+| Section | What You Can Edit |
+|---------|-------------------|
+| **Site Content** | Hero text, section descriptions, background media |
+| **Gallery** | Photos & videos for each section |
+| **Events** | Events with dates, locations, registration links |
+| **Merch** | Products with images, prices, external shop links |
+| **Model Team** | Talent profiles with headshots |
+| **Influencers** | Creator network with stats |
+| **Intakes** | Client consultation requests |
+| **Newsletter** | Subscribers + CSV export |
+| **Outreach** | Email campaign tracking |
+| **Social Links** | Header/footer links |
+| **Settings** | Site name, social URLs, analytics |
+
+## Deployment (Vercel)
+
+1. Push to GitHub
+2. Import project in [Vercel](https://vercel.com)
+3. Add environment variables in Vercel dashboard
+4. Deploy
+
+## Tech Stack
+
+- Next.js 16 + React 19
+- TypeScript + Tailwind CSS 4
+- Supabase (Database + Auth + Storage)
