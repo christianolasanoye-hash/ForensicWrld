@@ -30,6 +30,7 @@ interface ThemeSettings {
   heading_font: string;
   body_font: string;
   accent_font: string;
+  custom_fonts: { id: string; name: string; url: string; format: string }[];
   // Admin Colors
   admin_bg_color: string;
   admin_sidebar_color: string;
@@ -74,6 +75,7 @@ const defaultTheme: ThemeSettings = {
   heading_font: "Giants",
   body_font: "Polar Vortex",
   accent_font: "Jamday",
+  custom_fonts: [],
   admin_bg_color: "#000000",
   admin_sidebar_color: "#0A0A0A",
   admin_accent_color: "#FFFFFF",
@@ -82,7 +84,7 @@ const defaultTheme: ThemeSettings = {
   button_radius: "0px",
 };
 
-const fontOptions = [
+const baseFontOptions = [
   { label: "Giants", value: "Giants" },
   { label: "Polar Vortex", value: "Polar Vortex" },
   { label: "Jamday", value: "Jamday" },
@@ -189,6 +191,7 @@ export default function ThemePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadingFont, setUploadingFont] = useState(false);
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [addingUrl, setAddingUrl] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
@@ -467,6 +470,65 @@ export default function ThemePage() {
     setSettings((prev) => ({ ...prev, ...preset.theme }));
     setMessage(`Applied "${preset.name}" preset - click Save to apply`);
     setTimeout(() => setMessage(""), 3000);
+  };
+
+  const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const allowed = ["ttf", "otf", "woff", "woff2"];
+    if (!allowed.includes(ext)) {
+      setMessage("Font must be .ttf, .otf, .woff, or .woff2");
+      return;
+    }
+
+    setUploadingFont(true);
+    try {
+      const fileName = `fonts/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const { data: uploadData, error } = await supabase.storage
+        .from("media")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(uploadData.path);
+      const name = file.name.replace(/\.[^/.]+$/, "");
+      const newFont = {
+        id: `font_${Date.now()}`,
+        name,
+        url: urlData.publicUrl,
+        format: ext,
+      };
+
+      setSettings((prev) => ({
+        ...prev,
+        custom_fonts: [...(prev.custom_fonts || []), newFont],
+      }));
+      setMessage("Font uploaded. Select it in Typography.");
+    } catch (err) {
+      setMessage("Font upload error: " + (err as Error).message);
+    }
+
+    setUploadingFont(false);
+    e.target.value = "";
+  };
+
+  const removeCustomFont = async (fontId: string) => {
+    const target = settings.custom_fonts?.find((f) => f.id === fontId);
+    if (!target) return;
+    if (!confirm("Remove this font?")) return;
+    try {
+      const path = target.url.split("/media/")[1];
+      if (path) {
+        await supabase.storage.from("media").remove([path]);
+      }
+      setSettings((prev) => ({
+        ...prev,
+        custom_fonts: (prev.custom_fonts || []).filter((f) => f.id !== fontId),
+      }));
+      setMessage("Font removed");
+    } catch (err) {
+      setMessage("Font remove error: " + (err as Error).message);
+    }
   };
 
   const resetToDefault = () => {
@@ -1021,6 +1083,36 @@ WORLD"
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
             Typography
           </h3>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-[9px] uppercase tracking-widest text-white/40">Custom Fonts</div>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept=".ttf,.otf,.woff,.woff2"
+                onChange={handleFontUpload}
+                className="hidden"
+                disabled={uploadingFont}
+              />
+              <span className="px-3 py-1 text-[9px] font-bold uppercase tracking-widest border border-white/20 hover:border-white/40 inline-block">
+                {uploadingFont ? "Uploading..." : "+ Upload Font"}
+              </span>
+            </label>
+          </div>
+          {settings.custom_fonts?.length > 0 && (
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {settings.custom_fonts.map((font) => (
+                <div key={font.id} className="border border-white/10 p-2 flex items-center justify-between">
+                  <span className="text-[9px] text-white/60">{font.name}</span>
+                  <button
+                    onClick={() => removeCustomFont(font.id)}
+                    className="text-[9px] uppercase tracking-widest text-red-400 hover:text-red-300"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Heading Font">
               <select
@@ -1028,7 +1120,7 @@ WORLD"
                 onChange={(e) => updateColor("heading_font", e.target.value)}
                 className="w-full bg-transparent border border-white/20 px-3 py-2 text-white text-sm"
               >
-                {fontOptions.map((opt) => (
+                {[...baseFontOptions, ...(settings.custom_fonts || []).map((f) => ({ label: f.name, value: f.name }))].map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -1039,7 +1131,7 @@ WORLD"
                 onChange={(e) => updateColor("body_font", e.target.value)}
                 className="w-full bg-transparent border border-white/20 px-3 py-2 text-white text-sm"
               >
-                {fontOptions.map((opt) => (
+                {[...baseFontOptions, ...(settings.custom_fonts || []).map((f) => ({ label: f.name, value: f.name }))].map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -1050,7 +1142,7 @@ WORLD"
                 onChange={(e) => updateColor("accent_font", e.target.value)}
                 className="w-full bg-transparent border border-white/20 px-3 py-2 text-white text-sm"
               >
-                {fontOptions.map((opt) => (
+                {[...baseFontOptions, ...(settings.custom_fonts || []).map((f) => ({ label: f.name, value: f.name }))].map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>

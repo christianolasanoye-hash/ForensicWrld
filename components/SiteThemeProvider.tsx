@@ -18,6 +18,7 @@ interface SiteTheme {
   heading_font: string;
   body_font: string;
   accent_font: string;
+  custom_fonts: { id: string; name: string; url: string; format: string }[];
 }
 
 const defaultTheme: SiteTheme = {
@@ -35,6 +36,7 @@ const defaultTheme: SiteTheme = {
   heading_font: "Giants",
   body_font: "Polar Vortex",
   accent_font: "Jamday",
+  custom_fonts: [],
 };
 
 const SiteThemeContext = createContext<SiteTheme>(defaultTheme);
@@ -92,6 +94,7 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
           heading_font: payload.theme.heading_font || defaultTheme.heading_font,
           body_font: payload.theme.body_font || defaultTheme.body_font,
           accent_font: payload.theme.accent_font || defaultTheme.accent_font,
+          custom_fonts: payload.theme.custom_fonts || defaultTheme.custom_fonts,
         });
       }
       if (type === "site_preview_clear") {
@@ -119,6 +122,7 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
       heading_font: (data.heading_font as string) || defaultTheme.heading_font,
       body_font: (data.body_font as string) || defaultTheme.body_font,
       accent_font: (data.accent_font as string) || defaultTheme.accent_font,
+      custom_fonts: (data.custom_fonts as { id: string; name: string; url: string; format: string }[]) || defaultTheme.custom_fonts,
     });
   };
 
@@ -148,9 +152,9 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
       "Polar Vortex": "var(--font-polar)",
       "Jamday": "var(--font-jamday)",
     };
-    const headingFont = fontMap[activeTheme.heading_font] || "var(--font-giants)";
-    const bodyFont = fontMap[activeTheme.body_font] || "var(--font-jamday)";
-    const accentFont = fontMap[activeTheme.accent_font] || "var(--font-polar)";
+    const headingFont = fontMap[activeTheme.heading_font] || `'${activeTheme.heading_font}', var(--font-giants)`;
+    const bodyFont = fontMap[activeTheme.body_font] || `'${activeTheme.body_font}', var(--font-jamday)`;
+    const accentFont = fontMap[activeTheme.accent_font] || `'${activeTheme.accent_font}', var(--font-polar)`;
 
     // Colors
     root.style.setProperty("--site-primary", activeTheme.primary_color);
@@ -174,9 +178,18 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
     document.body.style.color = activeTheme.text_color;
   }, [theme, previewTheme, mounted]);
 
+  const activeForFonts = previewTheme || theme;
+  const fontFaces = (activeForFonts.custom_fonts || [])
+    .map(
+      (font) =>
+        `@font-face { font-family: '${font.name}'; src: url('${font.url}') format('${font.format}'); font-display: swap; }`
+    )
+    .join("\n");
+
   return (
     <SiteThemeContext.Provider value={theme}>
       <style jsx global>{`
+        ${fontFaces}
         :root {
           --site-primary: ${theme.primary_color};
           --site-secondary: ${theme.secondary_color};

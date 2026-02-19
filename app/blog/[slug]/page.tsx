@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import DOMPurify from "isomorphic-dompurify";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -125,11 +126,16 @@ export default function BlogPostPage() {
         '<a href="$2" class="underline hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">$1</a>'
       );
 
+      const safeHtml = DOMPurify.sanitize(text, {
+        ALLOWED_TAGS: ["strong", "em", "a", "br"],
+        ALLOWED_ATTR: ["href", "target", "rel", "class"],
+      });
+
       return (
         <p
           key={i}
           className="text-white/70 leading-relaxed my-6"
-          dangerouslySetInnerHTML={{ __html: text }}
+          dangerouslySetInnerHTML={{ __html: safeHtml }}
         />
       );
     });
