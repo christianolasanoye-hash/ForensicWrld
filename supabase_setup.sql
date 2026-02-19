@@ -31,3 +31,11 @@ ON CONFLICT (key) DO NOTHING;
 -- 5. Note on Storage:
 -- You need to manually create a public bucket named 'media' in the Supabase Dashboard.
 -- Go to Storage -> New Bucket -> Name: 'media' -> Public: ON.
+
+-- 6. Site versions (rollback snapshots)
+CREATE TABLE IF NOT EXISTS public.site_versions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    label TEXT,
+    data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);

@@ -1,8 +1,67 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
-import Badge from "./Badge";
+import { useEffect, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase-client";
 
 export default function Footer() {
+  const supabase = getSupabaseClient();
+  const [footerContent, setFooterContent] = useState({
+    footer_tagline: "MANIFESTING THE NEXT ERA OF CULTURE THROUGH IMMERSIVE VISUALS AND STRATEGIC CREATIVE DIRECTION.",
+    footer_location_1: "NYC",
+    footer_location_2: "LDN",
+    footer_location_3: "TYO",
+    footer_copyright: "© {year} FORENSIC WRLD // ALL RIGHTS RESERVED // CONCEPT TO MANIFESTATION",
+  });
+
+  useEffect(() => {
+    async function fetchFooterContent() {
+      const { data } = await supabase
+        .from("site_content")
+        .select("*")
+        .in("key", [
+          "footer_tagline",
+          "footer_location_1",
+          "footer_location_2",
+          "footer_location_3",
+          "footer_copyright",
+        ]);
+      if (data) {
+        const merged = { ...footerContent };
+        data.forEach((item: { key: string; value: string }) => {
+          merged[item.key as keyof typeof footerContent] = item.value;
+        });
+        setFooterContent(merged);
+      }
+    }
+
+    fetchFooterContent();
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const { type, payload } = event.data || {};
+      if (type !== "site_preview" || !payload?.content) return;
+
+      setFooterContent((prev) => ({
+        footer_tagline: payload.content.footer_tagline ?? prev.footer_tagline,
+        footer_location_1: payload.content.footer_location_1 ?? prev.footer_location_1,
+        footer_location_2: payload.content.footer_location_2 ?? prev.footer_location_2,
+        footer_location_3: payload.content.footer_location_3 ?? prev.footer_location_3,
+        footer_copyright: payload.content.footer_copyright ?? prev.footer_copyright,
+      }));
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  const copyrightText = footerContent.footer_copyright.replace(
+    "{year}",
+    new Date().getFullYear().toString()
+  );
+
   return (
     <footer className="bg-black py-20 px-6 sm:px-12 border-t border-white/5">
       <div className="max-w-[1400px] mx-auto">
@@ -13,7 +72,7 @@ export default function Footer() {
               <span className="font-polar text-[10px] tracking-[0.4em] text-white/50 -mt-1">WRLD STUDIO</span>
             </Link>
             <p className="text-white/40 text-xs uppercase tracking-widest leading-relaxed">
-              MANIFESTING THE NEXT ERA OF CULTURE THROUGH IMMERSIVE VISUALS AND STRATEGIC CREATIVE DIRECTION.
+              {footerContent.footer_tagline}
             </p>
           </div>
 
@@ -39,17 +98,16 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-12 border-t border-white/5">
-          <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase text-center sm:text-left">
-            © {new Date().getFullYear()} FORENSIC WRLD // ALL RIGHTS RESERVED // CONCEPT TO MANIFESTATION
-          </span>
-          <div className="flex gap-8">
-            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">NYC</span>
-            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">LDN</span>
-            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">TYO</span>
-          </div>
+            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase text-center sm:text-left">
+              {copyrightText}
+            </span>
+            <div className="flex gap-8">
+            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">{footerContent.footer_location_1}</span>
+            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">{footerContent.footer_location_2}</span>
+            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">{footerContent.footer_location_3}</span>
+            </div>
         </div>
       </div>
     </footer>
   );
 }
-

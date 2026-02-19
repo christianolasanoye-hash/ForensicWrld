@@ -2,15 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getSupabaseClient } from "@/lib/supabase-client";
-import Input from "@/components/Input";
-import Field from "@/components/Field";
 import Button from "@/components/Button";
+import Field from "@/components/Field";
+import Input from "@/components/Input";
+import Textarea from "@/components/Textarea";
 
-interface CustomFont {
+interface BackgroundMedia {
   id: string;
-  name: string;
   url: string;
-  format: string;
+  type: "video" | "image";
+  name: string;
+  is_active: boolean;
+  created_at: string;
 }
 
 interface ThemeSettings {
@@ -26,25 +29,37 @@ interface ThemeSettings {
   // Admin Colors
   admin_bg_color: string;
   admin_sidebar_color: string;
-  admin_card_color: string;
   admin_accent_color: string;
   admin_text_color: string;
-  admin_text_muted_color: string;
   admin_border_color: string;
-  // Fonts
-  heading_font: string;
-  body_font: string;
-  accent_font: string;
-  custom_fonts: CustomFont[];
   // Styles
-  button_style: string;
   button_radius: string;
-  card_radius: string;
-  image_radius: string;
 }
 
-const defaultSettings: ThemeSettings = {
-  // Site colors
+interface SectionItem {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  tagline?: string | null;
+  cta_text?: string | null;
+  cta_link?: string | null;
+  order_index: number;
+}
+
+interface SiteVersion {
+  id: string;
+  label: string | null;
+  data: {
+    theme: ThemeSettings;
+    content: Record<string, string>;
+    sections: SectionItem[];
+    active_background_id?: string | null;
+  };
+  created_at: string;
+}
+
+const defaultTheme: ThemeSettings = {
   primary_color: "#FFFFFF",
   secondary_color: "#000000",
   accent_color: "#FFFFFF",
@@ -52,769 +67,929 @@ const defaultSettings: ThemeSettings = {
   text_color: "#FFFFFF",
   text_muted_color: "#999999",
   border_color: "#333333",
-  // Admin colors
   admin_bg_color: "#000000",
-  admin_sidebar_color: "#000000",
-  admin_card_color: "#111111",
+  admin_sidebar_color: "#0A0A0A",
   admin_accent_color: "#FFFFFF",
   admin_text_color: "#FFFFFF",
-  admin_text_muted_color: "#666666",
-  admin_border_color: "#222222",
-  // Fonts
-  heading_font: "Giants",
-  body_font: "Polar Vortex",
-  accent_font: "Jamday",
-  custom_fonts: [],
-  // Styles
-  button_style: "solid",
+  admin_border_color: "#1A1A1A",
   button_radius: "0px",
-  card_radius: "0px",
-  image_radius: "0px",
 };
 
-const builtInFonts = [
-  { name: "Giants", variable: "--font-giants" },
-  { name: "Polar Vortex", variable: "--font-polar" },
-  { name: "Jamday", variable: "--font-jamday" },
+const themePresets = [
+  {
+    name: "Dark (Default)",
+    theme: { ...defaultTheme },
+  },
+  {
+    name: "Midnight Blue",
+    theme: {
+      ...defaultTheme,
+      primary_color: "#3B82F6",
+      accent_color: "#3B82F6",
+      background_color: "#0F172A",
+      border_color: "#1E293B",
+      admin_bg_color: "#0F172A",
+      admin_sidebar_color: "#020617",
+      admin_accent_color: "#3B82F6",
+      admin_border_color: "#1E293B",
+    },
+  },
+  {
+    name: "Forest",
+    theme: {
+      ...defaultTheme,
+      primary_color: "#22C55E",
+      accent_color: "#22C55E",
+      background_color: "#052E16",
+      border_color: "#14532D",
+      admin_bg_color: "#052E16",
+      admin_sidebar_color: "#022C22",
+      admin_accent_color: "#22C55E",
+      admin_border_color: "#14532D",
+    },
+  },
+  {
+    name: "Sunset",
+    theme: {
+      ...defaultTheme,
+      primary_color: "#F97316",
+      accent_color: "#F97316",
+      background_color: "#1C1917",
+      border_color: "#292524",
+      admin_bg_color: "#1C1917",
+      admin_sidebar_color: "#0C0A09",
+      admin_accent_color: "#F97316",
+      admin_border_color: "#292524",
+    },
+  },
+  {
+    name: "Minimal Light",
+    theme: {
+      ...defaultTheme,
+      primary_color: "#000000",
+      secondary_color: "#FFFFFF",
+      accent_color: "#000000",
+      background_color: "#FFFFFF",
+      text_color: "#000000",
+      text_muted_color: "#6B7280",
+      border_color: "#E5E7EB",
+      admin_bg_color: "#F9FAFB",
+      admin_sidebar_color: "#FFFFFF",
+      admin_accent_color: "#000000",
+      admin_text_color: "#000000",
+      admin_border_color: "#E5E7EB",
+    },
+  },
 ];
 
+const defaultContent: Record<string, string> = {
+  hero_title: "CREATE\nYOUR\nWORLD",
+  hero_subtitle: "WE HELP ARTISTS AND BRANDS MANIFEST THEIR VISION THROUGH HIGH-FIDELITY CONTENT AND STRATEGIC POSITIONING.",
+  hero_video: "",
+  network_tagline: "Nationwide Network of Creators",
+  network_description: "Gain instant access to collaborators, strategists, and production talent.",
+  header_brand_primary: "FORENSIC",
+  header_brand_secondary: "WRLD STUDIO",
+  header_cta_text: "Book Intake",
+  header_cta_link: "/intake",
+  footer_tagline: "MANIFESTING THE NEXT ERA OF CULTURE THROUGH IMMERSIVE VISUALS AND STRATEGIC CREATIVE DIRECTION.",
+  footer_location_1: "NYC",
+  footer_location_2: "LDN",
+  footer_location_3: "TYO",
+  footer_copyright: "© {year} FORENSIC WRLD // ALL RIGHTS RESERVED // CONCEPT TO MANIFESTATION",
+};
+
+function keyType(key: string) {
+  return key.includes("video") || key.includes("image") ? "media" : "text";
+}
+
 export default function ThemePage() {
-  const [settings, setSettings] = useState<ThemeSettings>(defaultSettings);
+  const [settings, setSettings] = useState<ThemeSettings>(defaultTheme);
+  const [content, setContent] = useState<Record<string, string>>(defaultContent);
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [backgroundMedia, setBackgroundMedia] = useState<BackgroundMedia[]>([]);
+  const [activeBackground, setActiveBackground] = useState<BackgroundMedia | null>(null);
+  const [versions, setVersions] = useState<SiteVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"colors" | "admin" | "fonts" | "styles">("colors");
-  const [uploadingFont, setUploadingFont] = useState(false);
-  const fontInputRef = useRef<HTMLInputElement>(null);
-
+  const [uploading, setUploading] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
+  const [previewReady, setPreviewReady] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const supabase = getSupabaseClient();
 
   useEffect(() => {
-    fetchSettings();
+    fetchAll();
   }, []);
 
-  const fetchSettings = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("theme_settings")
-        .select("*")
-        .single();
+  useEffect(() => {
+    if (!previewReady) return;
+    const timeout = setTimeout(() => {
+      sendPreview();
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [settings, content, sections, activeBackground, previewReady]);
 
-      if (data && !error) {
-        setSettings({
-          ...defaultSettings,
-          ...data,
-          custom_fonts: data.custom_fonts || [],
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching theme settings:", err);
-    }
+  const sendPreview = () => {
+    const payload = {
+      theme: settings,
+      content,
+      sections: sections.slice().sort((a, b) => a.order_index - b.order_index),
+      background: activeBackground ? { url: activeBackground.url, type: activeBackground.type } : null,
+    };
+    previewFrameRef.current?.contentWindow?.postMessage(
+      { type: "site_preview", payload },
+      window.location.origin
+    );
+  };
+
+  const fetchAll = async () => {
+    setLoading(true);
+    await Promise.all([fetchTheme(), fetchBackgroundMedia(), fetchContent(), fetchSections(), fetchVersions()]);
     setLoading(false);
   };
 
-  const handleSave = async () => {
+  const fetchTheme = async () => {
+    try {
+      const { data, error } = await supabase.from("theme_settings").select("*").single();
+      if (data && !error) {
+        setSettings({ ...defaultTheme, ...data });
+      }
+    } catch (err) {
+      console.error("Error fetching theme:", err);
+    }
+  };
+
+  const fetchContent = async () => {
+    try {
+      const { data } = await supabase.from("site_content").select("*");
+      if (data) {
+        const merged = { ...defaultContent } as Record<string, string>;
+        data.forEach((item: { key: string; value: string }) => {
+          merged[item.key] = item.value;
+        });
+        setContent(merged);
+      }
+    } catch (err) {
+      console.error("Error fetching content:", err);
+    }
+  };
+
+  const fetchSections = async () => {
+    try {
+      const { data } = await supabase
+        .from("sections")
+        .select("*")
+        .order("order_index", { ascending: true });
+      if (data) {
+        setSections(data as SectionItem[]);
+      }
+    } catch (err) {
+      console.error("Error fetching sections:", err);
+    }
+  };
+
+  const fetchVersions = async () => {
+    try {
+      const { data } = await supabase
+        .from("site_versions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (data) {
+        setVersions(data as SiteVersion[]);
+      }
+    } catch (err) {
+      console.warn("Versions table not available:", err);
+    }
+  };
+
+  const fetchBackgroundMedia = async () => {
+    try {
+      const { data } = await supabase
+        .from("background_media")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (data) {
+        setBackgroundMedia(data as BackgroundMedia[]);
+        setActiveBackground(data.find((m: BackgroundMedia) => m.is_active) || null);
+      }
+    } catch (err) {
+      console.error("Error fetching background media:", err);
+    }
+  };
+
+  const createVersion = async (label?: string) => {
+    try {
+      const version = {
+        theme: settings,
+        content,
+        sections,
+        active_background_id: activeBackground?.id || null,
+      };
+      const timestamp = new Date().toLocaleString();
+      const { error } = await supabase.from("site_versions").insert({
+        label: label ? `${label} ${timestamp}` : `Auto ${timestamp}`,
+        data: version,
+      });
+      if (error) throw error;
+      await fetchVersions();
+    } catch (err) {
+      setMessage("Error: Version save failed - " + (err as Error).message);
+    }
+  };
+
+  const handleSave = async (skipVersion?: boolean) => {
     setSaving(true);
     setMessage("");
 
-    const { id, ...settingsWithoutId } = settings;
-
     try {
-      if (id) {
-        const { error } = await supabase
-          .from("theme_settings")
-          .update({
-            ...settingsWithoutId,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", id);
+      if (!skipVersion) {
+        await createVersion();
+      }
 
-        if (error) throw error;
+      const { id, ...settingsWithoutId } = settings;
+      if (id) {
+        await supabase
+          .from("theme_settings")
+          .update({ ...settingsWithoutId, updated_at: new Date().toISOString() })
+          .eq("id", id);
       } else {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("theme_settings")
           .insert(settingsWithoutId)
           .select()
           .single();
-
-        if (error) throw error;
-        setSettings({ ...settings, id: data.id });
+        if (data) setSettings({ ...settings, id: data.id });
       }
-      setMessage("Theme settings saved successfully!");
+
+      const contentRecords = Object.entries(content).map(([key, value]) => ({
+        key,
+        value: value ?? "",
+        type: keyType(key),
+      }));
+      await supabase.from("site_content").upsert(contentRecords, { onConflict: "key" });
+
+      await Promise.all(
+        sections.map((section) =>
+          supabase
+            .from("sections")
+            .update({
+              title: section.title,
+              description: section.description,
+              tagline: section.tagline,
+              cta_text: section.cta_text,
+              cta_link: section.cta_link,
+              order_index: section.order_index,
+            })
+            .eq("id", section.id)
+        )
+      );
+
+      setMessage("Changes saved!");
+      setPreviewKey((k) => k + 1);
+      setTimeout(() => setMessage(""), 3000);
     } catch (err) {
-      setMessage("Error saving settings: " + (err as Error).message);
+      setMessage("Error: " + (err as Error).message);
     }
 
     setSaving(false);
+  };
+
+  const applyPreset = (preset: typeof themePresets[0]) => {
+    setSettings((prev) => ({ ...prev, ...preset.theme }));
+    setMessage(`Applied "${preset.name}" preset - click Save to apply`);
     setTimeout(() => setMessage(""), 3000);
   };
 
-  const updateField = <K extends keyof ThemeSettings>(field: K, value: ThemeSettings[K]) => {
+  const resetToDefault = () => {
+    if (confirm("Reset all colors to default? This will discard unsaved changes.")) {
+      setSettings((prev) => ({ ...prev, ...defaultTheme }));
+      setMessage("Reset to default - click Save to apply");
+      setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
+  const updateColor = (field: keyof ThemeSettings, value: string) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFontUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validFormats = [".ttf", ".otf", ".woff", ".woff2"];
-    const extension = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
-
-    if (!validFormats.includes(extension)) {
-      setMessage("Invalid font format. Please upload .ttf, .otf, .woff, or .woff2 files.");
-      return;
-    }
-
-    setUploadingFont(true);
-    setMessage("");
-
-    try {
-      const fileName = `fonts/${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage
-        .from("assets")
-        .upload(fileName, file, {
-          contentType: file.type || "font/" + extension.slice(1),
-        });
-
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage.from("assets").getPublicUrl(data.path);
-
-      const fontName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-      const format = extension === ".ttf" ? "truetype" : extension === ".otf" ? "opentype" : extension.slice(1);
-
-      const newFont: CustomFont = {
-        id: Date.now().toString(),
-        name: fontName,
-        url: urlData.publicUrl,
-        format,
-      };
-
-      updateField("custom_fonts", [...settings.custom_fonts, newFont]);
-      setMessage(`Font "${fontName}" uploaded successfully!`);
-    } catch (err) {
-      setMessage("Error uploading font: " + (err as Error).message);
-    }
-
-    setUploadingFont(false);
-    if (fontInputRef.current) fontInputRef.current.value = "";
+  const updateContent = (key: string, value: string) => {
+    setContent((prev) => ({ ...prev, [key]: value }));
   };
 
-  const removeFont = async (fontId: string) => {
-    const font = settings.custom_fonts.find((f) => f.id === fontId);
-    if (!font) return;
-
-    // Remove from storage
-    try {
-      const path = font.url.split("/assets/")[1];
-      if (path) {
-        await supabase.storage.from("assets").remove([path]);
-      }
-    } catch (err) {
-      console.error("Error removing font file:", err);
-    }
-
-    updateField(
-      "custom_fonts",
-      settings.custom_fonts.filter((f) => f.id !== fontId)
+  const updateSectionField = (id: string, patch: Partial<SectionItem>) => {
+    setSections((prev) =>
+      prev.map((section) => (section.id === id ? { ...section, ...patch } : section))
     );
   };
 
-  const getAllFonts = () => {
-    return [
-      ...builtInFonts.map((f) => f.name),
-      ...settings.custom_fonts.map((f) => f.name),
-    ];
+  const moveSection = (id: string, direction: "up" | "down") => {
+    setSections((prev) => {
+      const sorted = [...prev].sort((a, b) => a.order_index - b.order_index);
+      const index = sorted.findIndex((s) => s.id === id);
+      if (index === -1) return prev;
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= sorted.length) return prev;
+      const current = sorted[index];
+      const target = sorted[targetIndex];
+      const updated = sorted.map((s) => {
+        if (s.id === current.id) return { ...s, order_index: target.order_index };
+        if (s.id === target.id) return { ...s, order_index: current.order_index };
+        return s;
+      });
+      return updated;
+    });
   };
 
-  const tabs = [
-    { id: "colors", label: "Site Colors" },
-    { id: "admin", label: "Admin Theme" },
-    { id: "fonts", label: "Typography" },
-    { id: "styles", label: "Styles" },
-  ] as const;
+  const applyVersion = async (version: SiteVersion, saveNow?: boolean) => {
+    setSettings({ ...defaultTheme, ...version.data.theme });
+    setContent({ ...defaultContent, ...version.data.content });
+    setSections(version.data.sections || []);
+
+    const activeId = version.data.active_background_id || null;
+    if (activeId) {
+      const media = backgroundMedia.find((m) => m.id === activeId) || null;
+      setActiveBackground(media);
+    } else {
+      setActiveBackground(null);
+    }
+
+    setMessage(saveNow ? "Restoring version..." : "Version loaded. Review and save.");
+    if (saveNow) {
+      await handleSave(true);
+    }
+  };
+
+  // Background Media Functions
+  const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isVideo = file.type.startsWith("video/");
+    const isImage = file.type.startsWith("image/");
+    if (!isVideo && !isImage) {
+      setMessage("Please upload a video or image");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileName = `background/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const { data: uploadData, error } = await supabase.storage
+        .from("assets")
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(uploadData.path);
+
+      const { data: mediaData } = await supabase
+        .from("background_media")
+        .insert({
+          url: urlData.publicUrl,
+          type: isVideo ? "video" : "image",
+          name: file.name,
+          is_active: false,
+        })
+        .select()
+        .single();
+
+      if (mediaData) {
+        setBackgroundMedia((prev) => [mediaData as BackgroundMedia, ...prev]);
+        setMessage("Uploaded! Click on it to set as active.");
+      }
+    } catch (err) {
+      setMessage("Upload error: " + (err as Error).message);
+    }
+
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const setBackgroundActive = async (media: BackgroundMedia | null) => {
+    try {
+      await supabase.from("background_media").update({ is_active: false }).neq("id", "");
+
+      if (media) {
+        await supabase.from("background_media").update({ is_active: true }).eq("id", media.id);
+        await supabase.from("site_content").upsert(
+          { key: "hero_video", value: media.url, type: "media" },
+          { onConflict: "key" }
+        );
+      } else {
+        await supabase.from("site_content").upsert(
+          { key: "hero_video", value: "", type: "media" },
+          { onConflict: "key" }
+        );
+      }
+
+      setActiveBackground(media);
+      setBackgroundMedia((prev) =>
+        prev.map((m) => ({ ...m, is_active: media ? m.id === media.id : false }))
+      );
+      updateContent("hero_video", media ? media.url : "");
+      setPreviewKey((k) => k + 1);
+      setMessage(media ? "Background set!" : "Background removed!");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (err) {
+      setMessage("Error: " + (err as Error).message);
+    }
+  };
+
+  const deleteBackground = async (media: BackgroundMedia) => {
+    if (media.is_active) {
+      setMessage("Remove it as active first");
+      return;
+    }
+    if (!confirm("Delete this media?")) return;
+
+    try {
+      const path = media.url.split("/assets/")[1];
+      if (path) await supabase.storage.from("media").remove([path]);
+      await supabase.from("background_media").delete().eq("id", media.id);
+      setBackgroundMedia((prev) => prev.filter((m) => m.id !== media.id));
+      setMessage("Deleted");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (err) {
+      setMessage("Error: " + (err as Error).message);
+    }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-          Loading...
-        </div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-white/40">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-giants italic font-black uppercase tracking-tighter text-white">
-            Theme & Design
-          </h1>
-          <p className="text-white/40 text-sm mt-1">
-            Customize colors, fonts, and visual styles for your site
-          </p>
+    <div className="flex gap-8">
+      {/* Left Panel - Controls */}
+      <div className="flex-1 space-y-8 max-w-2xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-giants italic font-black uppercase tracking-tighter text-white">
+              Site Editor
+            </h1>
+            <p className="text-white/40 text-sm mt-1">Theme, content, and layout in one place</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={resetToDefault} className="bg-transparent border border-white/20 text-[9px]">
+              Reset
+            </Button>
+            <Button onClick={() => createVersion("Manual")} className="bg-transparent border border-white/20 text-[9px]">
+              Save Version
+            </Button>
+            <Button onClick={() => handleSave()} disabled={saving}>
+              {saving ? "SAVING..." : "SAVE CHANGES"}
+            </Button>
+          </div>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "SAVING..." : "SAVE CHANGES"}
-        </Button>
-      </div>
 
-      {message && (
-        <div
-          className={`mb-6 p-4 border text-[10px] font-bold uppercase tracking-widest ${
-            message.includes("Error")
-              ? "border-red-500/50 bg-red-500/10 text-red-400"
-              : "border-green-500/50 bg-green-500/10 text-green-400"
-          }`}
-        >
-          {message}
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-8 border-b border-white/10">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
-              activeTab === tab.id
-                ? "text-white border-b-2 border-white -mb-px"
-                : "text-white/40 hover:text-white/60"
+        {message && (
+          <div
+            className={`p-3 border text-[10px] font-bold uppercase tracking-widest ${
+              message.includes("Error") ? "border-red-500/50 bg-red-500/10 text-red-400" : "border-green-500/50 bg-green-500/10 text-green-400"
             }`}
           >
-            {tab.label}
-          </button>
-        ))}
+            {message}
+          </div>
+        )}
+
+        {/* Presets */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-3">
+            Quick Presets
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {themePresets.map((preset) => (
+              <button
+                key={preset.name}
+                onClick={() => applyPreset(preset)}
+                className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest border border-white/20 hover:border-white/40 transition-colors flex items-center gap-2"
+              >
+                <span
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: preset.theme.primary_color }}
+                />
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Hero Content */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">Hero Content</h3>
+          <Field label="Main Title">
+            <Textarea
+              rows={3}
+              value={content.hero_title}
+              onChange={(e) => updateContent("hero_title", e.target.value)}
+              placeholder="CREATE
+YOUR
+WORLD"
+            />
+          </Field>
+          <Field label="Subtitle">
+            <Textarea
+              rows={3}
+              value={content.hero_subtitle}
+              onChange={(e) => updateContent("hero_subtitle", e.target.value)}
+              placeholder="WE HELP ARTISTS AND BRANDS..."
+            />
+          </Field>
+        </div>
+
+        {/* Header */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">Header</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Brand Primary">
+              <Input
+                value={content.header_brand_primary}
+                onChange={(e) => updateContent("header_brand_primary", e.target.value)}
+                placeholder="FORENSIC"
+              />
+            </Field>
+            <Field label="Brand Secondary">
+              <Input
+                value={content.header_brand_secondary}
+                onChange={(e) => updateContent("header_brand_secondary", e.target.value)}
+                placeholder="WRLD STUDIO"
+              />
+            </Field>
+            <Field label="CTA Text">
+              <Input
+                value={content.header_cta_text}
+                onChange={(e) => updateContent("header_cta_text", e.target.value)}
+                placeholder="Book Intake"
+              />
+            </Field>
+            <Field label="CTA Link">
+              <Input
+                value={content.header_cta_link}
+                onChange={(e) => updateContent("header_cta_link", e.target.value)}
+                placeholder="/intake"
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">Footer</h3>
+          <Field label="Tagline">
+            <Textarea
+              rows={3}
+              value={content.footer_tagline}
+              onChange={(e) => updateContent("footer_tagline", e.target.value)}
+              placeholder="MANIFESTING THE NEXT ERA..."
+            />
+          </Field>
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Location 1">
+              <Input
+                value={content.footer_location_1}
+                onChange={(e) => updateContent("footer_location_1", e.target.value)}
+                placeholder="NYC"
+              />
+            </Field>
+            <Field label="Location 2">
+              <Input
+                value={content.footer_location_2}
+                onChange={(e) => updateContent("footer_location_2", e.target.value)}
+                placeholder="LDN"
+              />
+            </Field>
+            <Field label="Location 3">
+              <Input
+                value={content.footer_location_3}
+                onChange={(e) => updateContent("footer_location_3", e.target.value)}
+                placeholder="TYO"
+              />
+            </Field>
+          </div>
+          <Field label="Copyright">
+            <Input
+              value={content.footer_copyright}
+              onChange={(e) => updateContent("footer_copyright", e.target.value)}
+              placeholder="© {year} FORENSIC WRLD ..."
+            />
+          </Field>
+        </div>
+
+        {/* Network Section */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">Network Section</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Tagline">
+              <Input
+                value={content.network_tagline}
+                onChange={(e) => updateContent("network_tagline", e.target.value)}
+                placeholder="Nationwide Network of Creators"
+              />
+            </Field>
+            <Field label="Description">
+              <Textarea
+                rows={2}
+                value={content.network_description}
+                onChange={(e) => updateContent("network_description", e.target.value)}
+                placeholder="Gain instant access..."
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Sections */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">Homepage Sections</h3>
+          <div className="space-y-4">
+            {sections
+              .slice()
+              .sort((a, b) => a.order_index - b.order_index)
+              .map((section, index) => (
+                <div key={section.id} className="border border-white/10 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-white">
+                      {section.slug}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => moveSection(section.id, "up")}
+                        className="px-2 py-1 text-[9px] font-bold uppercase border border-white/20 hover:border-white/40"
+                        disabled={index == 0}
+                      >
+                        Up
+                      </button>
+                      <button
+                        onClick={() => moveSection(section.id, "down")}
+                        className="px-2 py-1 text-[9px] font-bold uppercase border border-white/20 hover:border-white/40"
+                        disabled={index == sections.length - 1}
+                      >
+                        Down
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="Title">
+                      <Input
+                        value={section.title}
+                        onChange={(e) => updateSectionField(section.id, { title: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Tagline">
+                      <Input
+                        value={section.tagline || ""}
+                        onChange={(e) => updateSectionField(section.id, { tagline: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Description">
+                    <Textarea
+                      rows={2}
+                      value={section.description || ""}
+                      onChange={(e) => updateSectionField(section.id, { description: e.target.value })}
+                    />
+                  </Field>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="CTA Text">
+                      <Input
+                        value={section.cta_text || ""}
+                        onChange={(e) => updateSectionField(section.id, { cta_text: e.target.value })}
+                        placeholder="Explore Works"
+                      />
+                    </Field>
+                    <Field label="CTA Link">
+                      <Input
+                        value={section.cta_link || ""}
+                        onChange={(e) => updateSectionField(section.id, { cta_link: e.target.value })}
+                        placeholder={`/${section.slug}`}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Background Media */}
+        <div className="border border-white/10 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+              Homepage Background
+            </h3>
+            <div className="flex gap-2">
+              {(activeBackground || content.hero_video) && (
+                <button
+                  onClick={() => setBackgroundActive(null)}
+                  className="px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-red-400 border border-red-500/30 hover:bg-red-500/10"
+                >
+                  Clear
+                </button>
+              )}
+              <label className="cursor-pointer">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/*,image/*"
+                  onChange={handleBackgroundUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                <span className="px-3 py-1 text-[9px] font-bold uppercase tracking-widest border border-white/20 hover:border-white/40 inline-block">
+                  {uploading ? "Uploading..." : "+ Upload"}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {activeBackground ? (
+            <div className="aspect-video bg-black/50 relative overflow-hidden mb-4">
+              {activeBackground.type === "video" ? (
+                <video src={activeBackground.url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+              ) : (
+                <img src={activeBackground.url} alt="" className="w-full h-full object-cover" />
+              )}
+              <div className="absolute bottom-2 left-2 px-2 py-1 bg-green-500/80 text-[8px] font-bold uppercase tracking-widest">
+                Active
+              </div>
+            </div>
+          ) : (
+            <div className="aspect-video bg-white/5 border border-dashed border-white/10 flex items-center justify-center mb-4">
+              <span className="text-white/30 text-[10px] uppercase tracking-widest">No background set</span>
+            </div>
+          )}
+
+          {backgroundMedia.length > 0 && (
+            <div className="grid grid-cols-4 gap-2">
+              {backgroundMedia.map((media) => (
+                <div
+                  key={media.id}
+                  className={`relative aspect-video bg-black/50 cursor-pointer group overflow-hidden ${
+                    media.is_active ? "ring-2 ring-green-500" : "hover:ring-2 hover:ring-white/30"
+                  }`}
+                  onClick={() => !media.is_active && setBackgroundActive(media)}
+                >
+                  {media.type === "video" ? (
+                    <video src={media.url} muted className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={media.url} alt="" className="w-full h-full object-cover" />
+                  )}
+                  {!media.is_active && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteBackground(media); }}
+                      className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 text-white text-[8px] opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Site Colors */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
+            Site Colors
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <ColorPicker label="Primary" value={settings.primary_color} onChange={(v) => updateColor("primary_color", v)} />
+            <ColorPicker label="Background" value={settings.background_color} onChange={(v) => updateColor("background_color", v)} />
+            <ColorPicker label="Text" value={settings.text_color} onChange={(v) => updateColor("text_color", v)} />
+            <ColorPicker label="Muted Text" value={settings.text_muted_color} onChange={(v) => updateColor("text_muted_color", v)} />
+            <ColorPicker label="Accent" value={settings.accent_color} onChange={(v) => updateColor("accent_color", v)} />
+            <ColorPicker label="Borders" value={settings.border_color} onChange={(v) => updateColor("border_color", v)} />
+          </div>
+        </div>
+
+        {/* Admin Colors */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
+            Admin Panel Colors
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <ColorPicker label="Background" value={settings.admin_bg_color} onChange={(v) => updateColor("admin_bg_color", v)} />
+            <ColorPicker label="Sidebar" value={settings.admin_sidebar_color} onChange={(v) => updateColor("admin_sidebar_color", v)} />
+            <ColorPicker label="Accent" value={settings.admin_accent_color} onChange={(v) => updateColor("admin_accent_color", v)} />
+            <ColorPicker label="Borders" value={settings.admin_border_color} onChange={(v) => updateColor("admin_border_color", v)} />
+          </div>
+        </div>
+
+        {/* Button Style */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
+            Button Style
+          </h3>
+          <Field label="Corner Radius">
+            <select
+              value={settings.button_radius}
+              onChange={(e) => updateColor("button_radius", e.target.value)}
+              className="w-full bg-transparent border border-white/20 px-3 py-2 text-white text-sm"
+            >
+              <option value="0px">Sharp (0px)</option>
+              <option value="4px">Slight (4px)</option>
+              <option value="8px">Rounded (8px)</option>
+              <option value="9999px">Pill</option>
+            </select>
+          </Field>
+        </div>
       </div>
 
-      {/* Colors Tab */}
-      {activeTab === "colors" && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ColorField
-              label="Primary Color"
-              hint="Main brand color"
-              value={settings.primary_color}
-              onChange={(v) => updateField("primary_color", v)}
-            />
-            <ColorField
-              label="Secondary Color"
-              hint="Secondary brand color"
-              value={settings.secondary_color}
-              onChange={(v) => updateField("secondary_color", v)}
-            />
-            <ColorField
-              label="Accent Color"
-              hint="Highlights and CTAs"
-              value={settings.accent_color}
-              onChange={(v) => updateField("accent_color", v)}
-            />
-            <ColorField
-              label="Background Color"
-              hint="Page background"
-              value={settings.background_color}
-              onChange={(v) => updateField("background_color", v)}
-            />
-            <ColorField
-              label="Text Color"
-              hint="Primary text color"
-              value={settings.text_color}
-              onChange={(v) => updateField("text_color", v)}
-            />
-            <ColorField
-              label="Muted Text Color"
-              hint="Secondary/muted text"
-              value={settings.text_muted_color}
-              onChange={(v) => updateField("text_muted_color", v)}
-            />
-            <ColorField
-              label="Border Color"
-              hint="Borders and dividers"
-              value={settings.border_color}
-              onChange={(v) => updateField("border_color", v)}
-            />
-          </div>
-
-          {/* Preview */}
-          <div className="border-t border-white/10 pt-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-4">
-              Preview
+      {/* Right Panel - Live Preview */}
+      <div className="w-[520px] flex-shrink-0">
+        <div className="sticky top-8 space-y-6">
+          <div>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
+              Live Site Preview
             </h3>
-            <div
-              className="p-8 border"
-              style={{
-                backgroundColor: settings.background_color,
-                borderColor: settings.border_color,
-              }}
-            >
-              <h4
-                className="text-2xl font-giants italic font-bold mb-2"
-                style={{ color: settings.text_color }}
-              >
-                Sample Heading
-              </h4>
-              <p className="mb-4" style={{ color: settings.text_muted_color }}>
-                This is a preview of how your colors will look on the site.
-              </p>
-              <button
-                className="px-6 py-3 text-sm font-bold uppercase tracking-widest"
-                style={{
-                  backgroundColor: settings.primary_color,
-                  color: settings.secondary_color,
+            <div className="border border-white/10 overflow-hidden bg-black">
+              <iframe
+                key={previewKey}
+                ref={previewFrameRef}
+                src="/?preview=1"
+                className="w-full h-[720px]"
+                onLoad={() => {
+                  setPreviewReady(true);
+                  sendPreview();
                 }}
-              >
-                Button Preview
-              </button>
+              />
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Admin Theme Tab */}
-      {activeTab === "admin" && (
-        <div className="space-y-8">
-          <div className="p-4 border border-yellow-500/30 bg-yellow-500/10 text-[10px] font-bold uppercase tracking-widest text-yellow-400 mb-6">
-            These colors apply to the admin dashboard you&apos;re currently viewing
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ColorField
-              label="Background"
-              hint="Main admin background"
-              value={settings.admin_bg_color}
-              onChange={(v) => updateField("admin_bg_color", v)}
-            />
-            <ColorField
-              label="Sidebar"
-              hint="Sidebar background color"
-              value={settings.admin_sidebar_color}
-              onChange={(v) => updateField("admin_sidebar_color", v)}
-            />
-            <ColorField
-              label="Cards"
-              hint="Card and panel backgrounds"
-              value={settings.admin_card_color}
-              onChange={(v) => updateField("admin_card_color", v)}
-            />
-            <ColorField
-              label="Accent"
-              hint="Active states and highlights"
-              value={settings.admin_accent_color}
-              onChange={(v) => updateField("admin_accent_color", v)}
-            />
-            <ColorField
-              label="Text"
-              hint="Primary text color"
-              value={settings.admin_text_color}
-              onChange={(v) => updateField("admin_text_color", v)}
-            />
-            <ColorField
-              label="Muted Text"
-              hint="Secondary/muted text"
-              value={settings.admin_text_muted_color}
-              onChange={(v) => updateField("admin_text_muted_color", v)}
-            />
-            <ColorField
-              label="Borders"
-              hint="Borders and dividers"
-              value={settings.admin_border_color}
-              onChange={(v) => updateField("admin_border_color", v)}
-            />
-          </div>
-
-          {/* Admin Preview */}
-          <div className="border-t border-white/10 pt-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-4">
-              Preview
+          <div className="border border-white/10 p-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-3">
+              Version History
             </h3>
-            <div className="flex gap-4 max-w-3xl">
-              {/* Sidebar Preview */}
-              <div
-                className="w-48 p-4 flex-shrink-0"
-                style={{
-                  backgroundColor: settings.admin_sidebar_color,
-                  borderRight: `1px solid ${settings.admin_border_color}`,
-                }}
-              >
-                <div
-                  className="text-sm font-bold mb-4"
-                  style={{ color: settings.admin_text_color }}
-                >
-                  FORENSIC
-                </div>
-                <div className="space-y-2">
-                  <div
-                    className="px-3 py-2 text-[10px] uppercase tracking-widest"
-                    style={{
-                      backgroundColor: settings.admin_accent_color + "20",
-                      color: settings.admin_text_color,
-                      borderLeft: `2px solid ${settings.admin_accent_color}`,
-                    }}
-                  >
-                    Dashboard
-                  </div>
-                  <div
-                    className="px-3 py-2 text-[10px] uppercase tracking-widest"
-                    style={{ color: settings.admin_text_muted_color }}
-                  >
-                    Gallery
-                  </div>
-                  <div
-                    className="px-3 py-2 text-[10px] uppercase tracking-widest"
-                    style={{ color: settings.admin_text_muted_color }}
-                  >
-                    Settings
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Content Preview */}
-              <div
-                className="flex-1 p-6"
-                style={{ backgroundColor: settings.admin_bg_color }}
-              >
-                <h4
-                  className="text-xl font-bold mb-4"
-                  style={{ color: settings.admin_text_color }}
-                >
-                  Dashboard
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div
-                    className="p-4"
-                    style={{
-                      backgroundColor: settings.admin_card_color,
-                      border: `1px solid ${settings.admin_border_color}`,
-                    }}
-                  >
-                    <div
-                      className="text-[10px] uppercase tracking-widest mb-1"
-                      style={{ color: settings.admin_text_muted_color }}
-                    >
-                      Total Views
+            <div className="space-y-2 max-h-[260px] overflow-y-auto">
+              {versions.length === 0 && (
+                <div className="text-[10px] text-white/40">No versions saved yet.</div>
+              )}
+              {versions.map((version) => (
+                <div key={version.id} className="flex items-center justify-between border border-white/10 p-2">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-white/60">
+                      {version.label || "Snapshot"}
                     </div>
-                    <div
-                      className="text-2xl font-bold"
-                      style={{ color: settings.admin_text_color }}
-                    >
-                      12,345
+                    <div className="text-[9px] text-white/40">
+                      {new Date(version.created_at).toLocaleString()}
                     </div>
                   </div>
-                  <div
-                    className="p-4"
-                    style={{
-                      backgroundColor: settings.admin_card_color,
-                      border: `1px solid ${settings.admin_border_color}`,
-                    }}
-                  >
-                    <div
-                      className="text-[10px] uppercase tracking-widest mb-1"
-                      style={{ color: settings.admin_text_muted_color }}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => applyVersion(version)}
+                      className="px-2 py-1 text-[9px] font-bold uppercase border border-white/20 hover:border-white/40"
                     >
-                      Submissions
-                    </div>
-                    <div
-                      className="text-2xl font-bold"
-                      style={{ color: settings.admin_text_color }}
+                      Load
+                    </button>
+                    <button
+                      onClick={() => applyVersion(version, true)}
+                      className="px-2 py-1 text-[9px] font-bold uppercase border border-white/20 hover:border-white/40"
                     >
-                      89
-                    </div>
-                  </div>
-                </div>
-                <button
-                  className="mt-4 px-4 py-2 text-[10px] font-bold uppercase tracking-widest"
-                  style={{
-                    backgroundColor: settings.admin_accent_color,
-                    color: settings.admin_bg_color,
-                  }}
-                >
-                  Action Button
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Fonts Tab */}
-      {activeTab === "fonts" && (
-        <div className="space-y-8">
-          {/* Font Assignments */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Field label="Heading Font" hint="Used for titles and headers">
-              <select
-                value={settings.heading_font}
-                onChange={(e) => updateField("heading_font", e.target.value)}
-                className="w-full bg-transparent border border-white/20 px-4 py-3 text-white text-sm focus:border-white focus:outline-none"
-              >
-                {getAllFonts().map((font) => (
-                  <option key={font} value={font}>
-                    {font}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Body Font" hint="Used for paragraphs and text">
-              <select
-                value={settings.body_font}
-                onChange={(e) => updateField("body_font", e.target.value)}
-                className="w-full bg-transparent border border-white/20 px-4 py-3 text-white text-sm focus:border-white focus:outline-none"
-              >
-                {getAllFonts().map((font) => (
-                  <option key={font} value={font}>
-                    {font}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Accent Font" hint="Used for labels and accents">
-              <select
-                value={settings.accent_font}
-                onChange={(e) => updateField("accent_font", e.target.value)}
-                className="w-full bg-transparent border border-white/20 px-4 py-3 text-white text-sm focus:border-white focus:outline-none"
-              >
-                {getAllFonts().map((font) => (
-                  <option key={font} value={font}>
-                    {font}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-
-          {/* Built-in Fonts */}
-          <div className="border-t border-white/10 pt-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-4">
-              Built-in Fonts
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {builtInFonts.map((font) => (
-                <div
-                  key={font.name}
-                  className="p-4 border border-white/10 bg-white/5"
-                >
-                  <div className="text-[10px] text-white/40 uppercase tracking-widest mb-2">
-                    {font.name}
-                  </div>
-                  <div
-                    className="text-2xl"
-                    style={{ fontFamily: `var(${font.variable})` }}
-                  >
-                    Aa Bb Cc 123
+                      Restore
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Custom Fonts */}
-          <div className="border-t border-white/10 pt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-white">
-                Custom Fonts
-              </h3>
-              <label className="cursor-pointer">
-                <input
-                  ref={fontInputRef}
-                  type="file"
-                  accept=".ttf,.otf,.woff,.woff2"
-                  onChange={handleFontUpload}
-                  className="hidden"
-                  disabled={uploadingFont}
-                />
-                <span className="inline-flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest border border-white/20 hover:border-white/40 transition-colors">
-                  {uploadingFont ? "Uploading..." : "+ Upload Font"}
-                </span>
-              </label>
-            </div>
-
-            {settings.custom_fonts.length === 0 ? (
-              <div className="p-8 border border-dashed border-white/10 text-center">
-                <div className="text-white/40 text-sm mb-2">No custom fonts uploaded</div>
-                <div className="text-white/20 text-[10px] uppercase tracking-widest">
-                  Upload .ttf, .otf, .woff, or .woff2 files
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {settings.custom_fonts.map((font) => (
-                  <div
-                    key={font.id}
-                    className="p-4 border border-white/10 bg-white/5 relative group"
-                  >
-                    <style>
-                      {`@font-face {
-                        font-family: '${font.name}';
-                        src: url('${font.url}') format('${font.format}');
-                      }`}
-                    </style>
-                    <div className="text-[10px] text-white/40 uppercase tracking-widest mb-2">
-                      {font.name}
-                    </div>
-                    <div className="text-2xl" style={{ fontFamily: font.name }}>
-                      Aa Bb Cc 123
-                    </div>
-                    <button
-                      onClick={() => removeFont(font.id)}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] uppercase tracking-widest text-red-400 hover:text-red-300"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-      )}
-
-      {/* Styles Tab */}
-      {activeTab === "styles" && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Field label="Button Style" hint="Style for buttons across the site">
-              <select
-                value={settings.button_style}
-                onChange={(e) => updateField("button_style", e.target.value)}
-                className="w-full bg-transparent border border-white/20 px-4 py-3 text-white text-sm focus:border-white focus:outline-none"
-              >
-                <option value="solid">Solid</option>
-                <option value="outline">Outline</option>
-                <option value="ghost">Ghost</option>
-              </select>
-            </Field>
-
-            <Field label="Button Radius" hint="Corner radius for buttons">
-              <select
-                value={settings.button_radius}
-                onChange={(e) => updateField("button_radius", e.target.value)}
-                className="w-full bg-transparent border border-white/20 px-4 py-3 text-white text-sm focus:border-white focus:outline-none"
-              >
-                <option value="0px">None (Sharp corners)</option>
-                <option value="4px">Small (4px)</option>
-                <option value="8px">Medium (8px)</option>
-                <option value="12px">Large (12px)</option>
-                <option value="9999px">Full (Pill shape)</option>
-              </select>
-            </Field>
-
-            <Field label="Card Radius" hint="Corner radius for cards and containers">
-              <select
-                value={settings.card_radius}
-                onChange={(e) => updateField("card_radius", e.target.value)}
-                className="w-full bg-transparent border border-white/20 px-4 py-3 text-white text-sm focus:border-white focus:outline-none"
-              >
-                <option value="0px">None (Sharp corners)</option>
-                <option value="4px">Small (4px)</option>
-                <option value="8px">Medium (8px)</option>
-                <option value="12px">Large (12px)</option>
-                <option value="16px">Extra Large (16px)</option>
-              </select>
-            </Field>
-
-            <Field label="Image Radius" hint="Corner radius for images">
-              <select
-                value={settings.image_radius}
-                onChange={(e) => updateField("image_radius", e.target.value)}
-                className="w-full bg-transparent border border-white/20 px-4 py-3 text-white text-sm focus:border-white focus:outline-none"
-              >
-                <option value="0px">None (Sharp corners)</option>
-                <option value="4px">Small (4px)</option>
-                <option value="8px">Medium (8px)</option>
-                <option value="12px">Large (12px)</option>
-                <option value="9999px">Full (Circle/Pill)</option>
-              </select>
-            </Field>
-          </div>
-
-          {/* Button Preview */}
-          <div className="border-t border-white/10 pt-8">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-4">
-              Button Preview
-            </h3>
-            <div className="flex flex-wrap gap-4">
-              {settings.button_style === "solid" && (
-                <button
-                  className="px-6 py-3 text-sm font-bold uppercase tracking-widest transition-all"
-                  style={{
-                    backgroundColor: settings.primary_color,
-                    color: settings.secondary_color,
-                    borderRadius: settings.button_radius,
-                  }}
-                >
-                  Solid Button
-                </button>
-              )}
-              {settings.button_style === "outline" && (
-                <button
-                  className="px-6 py-3 text-sm font-bold uppercase tracking-widest border-2 transition-all"
-                  style={{
-                    borderColor: settings.primary_color,
-                    color: settings.primary_color,
-                    borderRadius: settings.button_radius,
-                  }}
-                >
-                  Outline Button
-                </button>
-              )}
-              {settings.button_style === "ghost" && (
-                <button
-                  className="px-6 py-3 text-sm font-bold uppercase tracking-widest transition-all hover:bg-white/10"
-                  style={{
-                    color: settings.primary_color,
-                    borderRadius: settings.button_radius,
-                  }}
-                >
-                  Ghost Button
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
 
-// Color field component
-function ColorField({
-  label,
-  hint,
-  value,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
+function ColorPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <Field label={label} hint={hint}>
-      <div className="flex items-center gap-3">
-        <div
-          className="w-12 h-12 border border-white/20 cursor-pointer relative overflow-hidden flex-shrink-0"
-          style={{ backgroundColor: value }}
-        >
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-          />
-        </div>
-        <Input
+    <div className="flex items-center gap-2">
+      <div
+        className="w-8 h-8 border border-white/20 cursor-pointer relative overflow-hidden flex-shrink-0"
+        style={{ backgroundColor: value }}
+      >
+        <input
+          type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="#FFFFFF"
-          className="flex-1 font-mono"
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+        />
+      </div>
+      <div className="flex-1">
+        <div className="text-[9px] text-white/40 uppercase tracking-widest">{label}</div>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-transparent text-[10px] text-white font-mono border-none p-0 focus:outline-none"
           maxLength={7}
         />
       </div>
-    </Field>
+    </div>
   );
 }

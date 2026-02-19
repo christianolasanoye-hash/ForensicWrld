@@ -153,7 +153,7 @@ export default function BackgroundMediaPage() {
       // Delete from storage
       const path = media.url.split("/assets/")[1];
       if (path) {
-        await supabase.storage.from("assets").remove([path]);
+        await supabase.storage.from("media").remove([path]);
       }
 
       // Delete from database

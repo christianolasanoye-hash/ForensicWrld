@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Badge from "@/components/Badge";
-import Button from "@/components/Button";
 import SectionPreview from "@/components/SectionPreview";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -19,58 +17,32 @@ interface ContentItem {
   value: string;
 }
 
-const sections = [
-  {
-    slug: "film",
-    title: "Film Campaigns",
-    description: "With proven strategies, we position your brand in front of the right audiences at the right time.",
-    link: "/film",
-  },
-  {
-    slug: "photography",
-    title: "Photography",
-    description: "We don’t just chase likes—we convert attention into measurable revenue and long-term customer loyalty!",
-    link: "/photography",
-  },
-  {
-    slug: "social",
-    title: "Social Marketing",
-    description: "From viral videos to scroll-stopping visuals, we create content that cuts through the noise and drives action.",
-    link: "/social",
-  },
-  {
-    slug: "events",
-    title: "Events",
-    description: "Pop-ups, screenings, brand moments. Built to feel like culture — not a conference.",
-    link: "/events",
-  },
-  {
-    slug: "model-team",
-    title: "Model Team",
-    description: "Looking for models for your next project? Or interested in a joining the team.",
-    link: "/model-team",
-  },
-];
+interface SectionItem {
+  id?: string;
+  slug: string;
+  title: string;
+  description: string;
+  tagline?: string | null;
+  cta_text?: string | null;
+  cta_link?: string | null;
+  order_index?: number;
+  link?: string;
+}
+
+const defaultSections: SectionItem[] = [];
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [sectionMedia, setSectionMedia] = useState<Record<string, MediaItem[]>>({
-    photography: [
-      { id: '1', url: '/forensicBrandShoots.JPG', type: 'image' },
-      { id: '2', url: '/forensicEditorials.JPG', type: 'image' },
-      { id: '3', url: '/forensicLifestyle.JPG', type: 'image' },
-    ],
-    film: [
-      { id: '4', url: '/forensicEvents.JPG', type: 'image' },
-      { id: '5', url: '/forensicStudioPortraits.JPG', type: 'image' },
-    ]
-  });
+  const [sectionMedia, setSectionMedia] = useState<Record<string, MediaItem[]>>({});
+
 
   const [heroContent, setHeroContent] = useState({
-    title: "CREATE\nYOUR\nWORLD",
-    subtitle: "WE HELP ARTISTS AND BRANDS MANIFEST THEIR VISION THROUGH HIGH-FIDELITY CONTENT AND STRATEGIC POSITIONING.",
-    video: "/backgroundVideo.mov"
+    title: "",
+    subtitle: "",
+    video: ""
   });
+
+  const [sectionList, setSectionList] = useState<SectionItem[]>(defaultSections);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -86,18 +58,39 @@ export default function Home() {
         const video = data.find((c: ContentItem) => c.key === 'hero_video')?.value;
 
         setHeroContent(prev => ({
-          title: title || prev.title,
-          subtitle: subtitle || prev.subtitle,
-          video: video || prev.video
+          title: title ?? prev.title,
+          subtitle: subtitle ?? prev.subtitle,
+          video: video ?? prev.video
         }));
       }
     }
 
-    async function fetchMedia() {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!supabaseUrl || supabaseUrl.includes('placeholder')) return;
+    async function fetchSections() {
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from("sections")
+        .select("*")
+        .order("order_index", { ascending: true });
 
-      for (const section of sections) {
+      if (data && !error) {
+        const mapped = (data as SectionItem[]).map((section) => ({
+          ...section,
+          link: section.cta_link && section.cta_link.trim() ? section.cta_link : `/${section.slug}`,
+        }));
+        setSectionList(mapped);
+      }
+    }
+
+    fetchHeroContent();
+    fetchSections();
+  }, []);
+
+  useEffect(() => {
+    async function fetchMedia(targetSections: SectionItem[]) {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl || supabaseUrl.includes("placeholder")) return;
+
+      for (const section of targetSections) {
         try {
           if (!supabase) continue;
           const { data, error } = await supabase
@@ -123,26 +116,75 @@ export default function Home() {
       }
     }
 
-    fetchHeroContent();
-    fetchMedia();
+    fetchMedia(sectionList);
+  }, [sectionList]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const { type, payload } = event.data || {};
+      if (type !== "site_preview") return;
+
+      if (payload?.theme) {
+        const root = document.documentElement;
+        root.style.setProperty("--site-primary", payload.theme.primary_color);
+        root.style.setProperty("--site-secondary", payload.theme.secondary_color);
+        root.style.setProperty("--site-accent", payload.theme.accent_color);
+        root.style.setProperty("--site-background", payload.theme.background_color);
+        root.style.setProperty("--site-text", payload.theme.text_color);
+        root.style.setProperty("--site-text-muted", payload.theme.text_muted_color);
+        root.style.setProperty("--site-border", payload.theme.border_color);
+        root.style.setProperty("--site-button-radius", payload.theme.button_radius);
+        document.body.style.backgroundColor = payload.theme.background_color;
+        document.body.style.color = payload.theme.text_color;
+      }
+
+      if (payload?.content) {
+        setHeroContent((prev) => ({
+          title: payload.content.hero_title ?? prev.title,
+          subtitle: payload.content.hero_subtitle ?? prev.subtitle,
+          video: payload.content.hero_video ?? prev.video,
+        }));
+      }
+
+      if (payload?.sections) {
+        const ordered = (payload.sections as SectionItem[])
+          .slice()
+          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+          .map((section) => ({
+            ...section,
+            link: section.cta_link && section.cta_link.trim() ? section.cta_link : `/${section.slug}`,
+          }));
+        setSectionList(ordered);
+      }
+
+      if (payload?.background?.url) {
+        setHeroContent((prev) => ({ ...prev, video: payload.background.url }));
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   return (
     <div className="relative min-h-screen bg-black text-white">
       {/* Background Video Layer */}
       <div className="fixed inset-0 h-screen w-full overflow-hidden z-0">
-        <video
-          key={heroContent.video}
-          ref={videoRef}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="h-full w-full object-cover opacity-40 scale-105 transition-transform duration-[10s] ease-linear"
-        >
-          <source src={heroContent.video} type="video/quicktime" />
-          <source src={heroContent.video} type="video/mp4" />
-        </video>
+        {heroContent.video && (
+          <video
+            key={heroContent.video}
+            ref={videoRef}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="h-full w-full object-cover opacity-40 scale-105 transition-transform duration-[10s] ease-linear"
+          >
+            <source src={heroContent.video} type="video/quicktime" />
+            <source src={heroContent.video} type="video/mp4" />
+          </video>
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
       </div>
@@ -150,11 +192,9 @@ export default function Home() {
       {/* Content */}
       <div className="relative z-10">
         {/* Hero Section */}
+        {(heroContent.title || heroContent.subtitle) && (
         <section className="h-screen flex flex-col justify-end px-6 pb-20 sm:px-12 sm:pb-32">
           <div className="max-w-[1400px] mx-auto w-full">
-            <div className="inline-block font-polar text-[10px] tracking-[0.5em] text-white/40 mb-8 border-l border-white/20 pl-4 py-1">
-              EST. MMXXIV / CREATIVE COLLECTIVE
-            </div>
             <h1 className="text-[14vw] sm:text-[12vw] leading-[0.85] font-giants italic font-black uppercase tracking-tighter mb-8 whitespace-pre-line">
               {heroContent.title.includes('\n') ? (
                 heroContent.title.split('\n').map((line, i, arr) => (
@@ -168,21 +208,19 @@ export default function Home() {
               )}
             </h1>
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-12">
-              <p className="max-w-md text-sm sm:text-lg text-white/60 font-medium leading-relaxed uppercase tracking-wider">
-                {heroContent.subtitle}
-              </p>
-              <Link href="/intake" className="group">
-                <span className="inline-flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.3em] bg-white text-black px-10 py-6 hover:bg-white/90 transition-all">
-                  Start Project <span className="group-hover:translate-x-2 transition-transform">→</span>
-                </span>
-              </Link>
+              {heroContent.subtitle && (
+                <p className="max-w-md text-sm sm:text-lg text-white/60 font-medium leading-relaxed uppercase tracking-wider">
+                  {heroContent.subtitle}
+                </p>
+              )}
             </div>
           </div>
         </section>
+        )}
 
         {/* Feature Sections */}
         <div className="bg-black">
-          {sections.map((section, idx) => (
+          {sectionList.map((section, idx) => (
             <section key={section.slug} className="relative py-32 sm:py-48 px-6 sm:px-12 border-t border-white/5">
               <div className="max-w-[1400px] mx-auto">
                 <div className="flex flex-col lg:flex-row gap-20">
@@ -191,15 +229,26 @@ export default function Home() {
                     <div className="flex items-start gap-6">
                       <span className="font-giants italic text-4xl text-white/20">0{idx + 1}</span>
                       <div>
-                        <h2 className="text-6xl sm:text-7xl font-giants italic font-black uppercase tracking-tighter mb-6">
-                          {section.title}
-                        </h2>
-                        <p className="text-white/50 text-sm sm:text-base leading-relaxed mb-10 max-w-sm">
-                          {section.description}
-                        </p>
-                        <Link href={section.link} className="inline-flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.2em] group">
-                          Explore Works <span className="w-12 h-[1px] bg-white/20 group-hover:w-20 group-hover:bg-white transition-all" />
-                        </Link>
+                        {section.title && (
+                          <h2 className="text-6xl sm:text-7xl font-giants italic font-black uppercase tracking-tighter mb-6">
+                            {section.title}
+                          </h2>
+                        )}
+                        {section.tagline && (
+                          <div className="text-[11px] uppercase tracking-[0.3em] text-white/40 mb-3">
+                            {section.tagline}
+                          </div>
+                        )}
+                        {section.description && (
+                          <p className="text-white/50 text-sm sm:text-base leading-relaxed mb-10 max-w-sm">
+                            {section.description}
+                          </p>
+                        )}
+                        {(section.cta_text || section.cta_link) && (
+                          <Link href={(section.cta_link && section.cta_link.trim()) || section.link || `/${section.slug}`} className="inline-flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.2em] group">
+                            {section.cta_text || "View"} <span className="w-12 h-[1px] bg-white/20 group-hover:w-20 group-hover:bg-white transition-all" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>

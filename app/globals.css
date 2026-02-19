@@ -88,3 +88,58 @@ p {
   opacity: 0.7;
   /* Increased from 0.8 to be slightly clearer on dark backgrounds */
 }
+/* Theme unification overrides for public pages */
+.theme-unified .bg-black {
+  background-color: var(--site-background) !important;
+}
+
+.theme-unified .text-white {
+  color: var(--site-text) !important;
+}
+
+.theme-unified .text-white\/60 {
+  color: color-mix(in srgb, var(--site-text) 60%, transparent) !important;
+}
+
+.theme-unified .text-white\/50 {
+  color: color-mix(in srgb, var(--site-text) 50%, transparent) !important;
+}
+
+.theme-unified .text-white\/40 {
+  color: color-mix(in srgb, var(--site-text) 40%, transparent) !important;
+}
+
+.theme-unified .text-white\/20 {
+  color: color-mix(in srgb, var(--site-text) 20%, transparent) !important;
+}
+
+.theme-unified .border-white,
+.theme-unified .border-white\/10,
+.theme-unified .border-white\/20,
+.theme-unified .border-white\/30,
+.theme-unified .border-white\/40,
+.theme-unified .border-white\/50 {
+  border-color: var(--site-border) !important;
+}
+
+.theme-unified .bg-white {
+  background-color: var(--site-primary) !important;
+}
+
+.theme-unified .text-black {
+  color: var(--site-secondary) !important;
+}
+
+.theme-unified .bg-white\/5,
+.theme-unified .bg-white\/10,
+.theme-unified .bg-white\/20,
+.theme-unified .bg-white\/30,
+.theme-unified .bg-white\/40 {
+  background-color: color-mix(in srgb, var(--site-text) 10%, transparent) !important;
+}
+
+.theme-unified .bg-black\/40,
+.theme-unified .bg-black\/50,
+.theme-unified .bg-black\/60 {
+  background-color: color-mix(in srgb, var(--site-background) 80%, transparent) !important;
+}

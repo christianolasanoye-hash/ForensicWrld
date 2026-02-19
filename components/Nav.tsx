@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase-client";
 
 const navItems = [
   { key: "/", label: "Home" },
@@ -20,6 +21,54 @@ const navItems = [
 export default function Nav() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const supabase = getSupabaseClient();
+  const [headerContent, setHeaderContent] = useState({
+    header_brand_primary: "FORENSIC",
+    header_brand_secondary: "WRLD STUDIO",
+    header_cta_text: "Book Intake",
+    header_cta_link: "/intake",
+  });
+
+  useEffect(() => {
+    async function fetchHeaderContent() {
+      const { data } = await supabase
+        .from("site_content")
+        .select("*")
+        .in("key", [
+          "header_brand_primary",
+          "header_brand_secondary",
+          "header_cta_text",
+          "header_cta_link",
+        ]);
+      if (data) {
+        const merged = { ...headerContent };
+        data.forEach((item: { key: string; value: string }) => {
+          merged[item.key as keyof typeof headerContent] = item.value;
+        });
+        setHeaderContent(merged);
+      }
+    }
+
+    fetchHeaderContent();
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const { type, payload } = event.data || {};
+      if (type !== "site_preview" || !payload?.content) return;
+
+      setHeaderContent((prev) => ({
+        header_brand_primary: payload.content.header_brand_primary ?? prev.header_brand_primary,
+        header_brand_secondary: payload.content.header_brand_secondary ?? prev.header_brand_secondary,
+        header_cta_text: payload.content.header_cta_text ?? prev.header_cta_text,
+        header_cta_link: payload.content.header_cta_link ?? prev.header_cta_link,
+      }));
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   return (
     <>
@@ -30,8 +79,12 @@ export default function Nav() {
             className="group flex flex-col -gap-1 hover:opacity-80 transition-opacity"
             aria-label="Go to home"
           >
-            <span className="font-giants text-2xl italic font-black uppercase tracking-tighter leading-none">FORENSIC</span>
-            <span className="font-polar text-[10px] tracking-[0.4em] text-white/50 -mt-1">WRLD STUDIO</span>
+            <span className="font-giants text-2xl italic font-black uppercase tracking-tighter leading-none">
+              {headerContent.header_brand_primary}
+            </span>
+            <span className="font-polar text-[10px] tracking-[0.4em] text-white/50 -mt-1">
+              {headerContent.header_brand_secondary}
+            </span>
           </Link>
 
           <div className="hidden items-center gap-6 lg:flex">
@@ -50,9 +103,9 @@ export default function Nav() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/intake" className="hidden sm:block">
+            <Link href={headerContent.header_cta_link || "/intake"} className="hidden sm:block">
               <span className="text-[11px] font-bold uppercase tracking-[0.2em] border border-white/20 px-4 py-2 hover:bg-white hover:text-black transition-all">
-                Book Intake
+                {headerContent.header_cta_text || "Book Intake"}
               </span>
             </Link>
             <button
@@ -81,15 +134,14 @@ export default function Nav() {
             </Link>
           ))}
           <Link
-            href="/intake"
+            href={headerContent.header_cta_link || "/intake"}
             onClick={() => setIsOpen(false)}
             className="mt-8 text-center text-xs font-bold uppercase tracking-[0.3em] bg-white text-black py-6"
           >
-            Book Intake →
+            {headerContent.header_cta_text || "Book Intake"} →
           </Link>
         </div>
       )}
     </>
   );
 }
-

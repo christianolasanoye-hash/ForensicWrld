@@ -94,7 +94,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${jamday.variable} ${polarVortex.variable} ${giants.variable} font-sans antialiased min-h-screen bg-black text-white`}
+        className={`${jamday.variable} ${polarVortex.variable} ${giants.variable} font-sans antialiased min-h-screen bg-black text-white theme-unified`}
       >
         <Analytics />
         <LayoutWrapper>{children}</LayoutWrapper>

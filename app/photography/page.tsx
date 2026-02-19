@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import Link from "next/link";
 import SectionHeader from "@/components/SectionHeader";
-import Button from "@/components/Button";
 import MediaGrid from "@/components/MediaGrid";
 
 export default function PhotoPage() {
   const [media, setMedia] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sectionInfo, setSectionInfo] = useState<{ title?: string; description?: string; tagline?: string } | null>(null);
 
   useEffect(() => {
     async function fetchPhotos() {
@@ -23,30 +22,35 @@ export default function PhotoPage() {
       if (data) setMedia(data);
       setLoading(false);
     }
+    async function fetchSection() {
+      if (!supabase) return;
+      const { data } = await supabase
+        .from("sections")
+        .select("title, description, tagline")
+        .eq("slug", "photography")
+        .single();
+      if (data) setSectionInfo(data);
+    }
     fetchPhotos();
+    fetchSection();
   }, []);
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 sm:px-12 pb-32">
-      <SectionHeader
-        eyebrow="Photography Services"
-        title="Photography services"
-        subtitle="“We don’t just chase likes—we convert attention into measurable revenue and long-term customer loyalty!”"
-        actions={
-          <div className="flex flex-wrap gap-4">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] bg-white text-black px-8 py-4 hover:bg-white/90 transition-all cursor-pointer">
-              Book via Calendly
-            </span>
-          </div>
-        }
-      />
+      {sectionInfo && (sectionInfo.title || sectionInfo.description) && (
+        <SectionHeader
+          eyebrow={sectionInfo.tagline || ""}
+          title={sectionInfo.title || ""}
+          subtitle={sectionInfo.description || ""}
+        />
+      )}
 
       {loading ? (
         <div className="py-20 text-center text-[10px] font-bold uppercase tracking-[0.3em] text-white/20">
           Syncing Media Registry...
         </div>
       ) : (
-        <MediaGrid items={media} sectionTitle="Photography" />
+        media.length > 0 && <MediaGrid items={media} sectionTitle={sectionInfo?.title || "Photography"} />
       )}
     </div>
   );

@@ -22,33 +22,23 @@ interface SectionContent {
   tagline: string;
 }
 
-const defaultLifestylePhotos = [
-  "/merch/IMG_7095.JPG",
-  "/merch/IMG_7100.jpeg",
-  "/merch/IMG_7101.jpeg",
-  "/merch/IMG_7103.jpeg",
-  "/merch/IMG_7105.jpeg",
-];
-
 export default function MerchPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [merchItems, setMerchItems] = useState<MerchItem[]>([]);
   const [sectionContent, setSectionContent] = useState<SectionContent>({
-    title: "Merch",
-    description: "Help us fund our endeavors.",
-    tagline: "SUPPORT THE MOVEMENT",
+    title: "",
+    description: "",
+    tagline: "",
   });
-  const [galleryImages, setGalleryImages] = useState<string[]>(defaultLifestylePhotos);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   useEffect(() => {
+    if (galleryImages.length < 2) return;
     const timer = setInterval(() => {
-      setGalleryImages((imgs) => {
-        setCurrentSlide((prev) => (prev + 1) % imgs.length);
-        return imgs;
-      });
+      setCurrentSlide((prev) => (prev + 1) % galleryImages.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [galleryImages.length]);
 
   useEffect(() => {
     async function fetchData() {
@@ -63,9 +53,9 @@ export default function MerchPage() {
 
       if (sectionData) {
         setSectionContent({
-          title: sectionData.title || "Merch",
-          description: sectionData.description || "Help us fund our endeavors.",
-          tagline: sectionData.tagline || "SUPPORT THE MOVEMENT",
+          title: sectionData.title || "",
+          description: sectionData.description || "",
+          tagline: sectionData.tagline || "",
         });
       }
 
@@ -124,52 +114,56 @@ export default function MerchPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 sm:px-12 pb-32">
-      <SectionHeader
-        eyebrow={sectionContent.tagline}
-        title={sectionContent.title}
-        subtitle={sectionContent.description.toUpperCase()}
-      />
+      {(sectionContent.title || sectionContent.description) && (
+        <SectionHeader
+          eyebrow={sectionContent.tagline}
+          title={sectionContent.title}
+          subtitle={sectionContent.description}
+        />
+      )}
 
       {/* Hero Slider */}
-      <div className="relative aspect-[16/9] w-full overflow-hidden border border-white/5 bg-black">
-        {galleryImages.map((photo, index) => (
-          <div
-            key={photo}
-            className={`absolute inset-0 transition-all duration-[2s] ease-out ${
-              index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-110"
-            }`}
-          >
-            <Image
-              src={photo}
-              alt={`Merch lifestyle ${index + 1}`}
-              fill
-              className="object-cover opacity-60"
-              priority={index === 0}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
-          </div>
-        ))}
-
-        {/* Slider Controls */}
-        <div className="absolute bottom-12 left-12 flex gap-4">
-          {galleryImages.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`h-[2px] transition-all duration-500 ${
-                index === currentSlide ? "w-12 bg-white" : "w-4 bg-white/20 hover:bg-white/40"
+      {galleryImages.length > 0 && (
+        <div className="relative aspect-[16/9] w-full overflow-hidden border border-white/5 bg-black">
+          {galleryImages.map((photo, index) => (
+            <div
+              key={photo}
+              className={`absolute inset-0 transition-all duration-[2s] ease-out ${
+                index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-110"
               }`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
+            >
+              <Image
+                src={photo}
+                alt={`Merch lifestyle ${index + 1}`}
+                fill
+                className="object-cover opacity-60"
+                priority={index === 0}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
+            </div>
           ))}
-        </div>
 
-        <div className="absolute top-12 right-12">
-          <span className="font-polar text-[8px] tracking-[1em] text-white/20 uppercase text-vertical">
-            CATALOG // FORENSIC WRLD
-          </span>
+          {/* Slider Controls */}
+          <div className="absolute bottom-12 left-12 flex gap-4">
+            {galleryImages.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`h-[2px] transition-all duration-500 ${
+                  index === currentSlide ? "w-12 bg-white" : "w-4 bg-white/20 hover:bg-white/40"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+
+          <div className="absolute top-12 right-12">
+            <span className="font-polar text-[8px] tracking-[1em] text-white/20 uppercase text-vertical">
+              CATALOG // FORENSIC WRLD
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Product Grid */}
       {merchItems.length > 0 && (

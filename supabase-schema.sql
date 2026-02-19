@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS sections (
   slug TEXT UNIQUE NOT NULL, -- film, photography, social, etc
   title TEXT NOT NULL,
   description TEXT,
+  tagline TEXT,
+  cta_text TEXT,
+  cta_link TEXT,
   order_index INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -219,3 +222,19 @@ CREATE POLICY "Public can read published blog posts" ON blog_posts
 CREATE POLICY "Authenticated users can manage blog posts" ON blog_posts
   FOR ALL USING (auth.role() = 'authenticated');
 
+
+-- =====================================================
+-- SITE VERSIONS (ROLLBACK)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS site_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  label TEXT,
+  data JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE site_versions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can manage site versions" ON site_versions
+  FOR ALL USING (auth.role() = authenticated);

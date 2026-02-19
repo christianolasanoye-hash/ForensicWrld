@@ -24,7 +24,7 @@ const navItems = [
   { href: "/admin/outreach", label: "Outreach", icon: "◯" },
   { href: "/admin/links", label: "Social Links", icon: "◰" },
   { href: "/admin/seo", label: "SEO & Social", icon: "◲" },
-  { href: "/admin/theme", label: "Theme & Design", icon: "◐" },
+  { href: "/admin/theme", label: "Site Editor", icon: "◐" },
   { href: "/admin/settings", label: "Settings", icon: "◱" },
 ];
 

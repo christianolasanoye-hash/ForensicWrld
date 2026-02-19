@@ -45,6 +45,7 @@ export function useSiteTheme() {
 
 export function SiteThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<SiteTheme>(defaultTheme);
+  const [previewTheme, setPreviewTheme] = useState<SiteTheme | null>(null);
   const [mounted, setMounted] = useState(false);
   const supabase = getSupabaseClient();
 
@@ -69,6 +70,37 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const { type, payload } = event.data || {};
+      if (type === "site_preview" && payload?.theme) {
+        setPreviewTheme({
+          primary_color: payload.theme.primary_color || defaultTheme.primary_color,
+          secondary_color: payload.theme.secondary_color || defaultTheme.secondary_color,
+          accent_color: payload.theme.accent_color || defaultTheme.accent_color,
+          background_color: payload.theme.background_color || defaultTheme.background_color,
+          text_color: payload.theme.text_color || defaultTheme.text_color,
+          text_muted_color: payload.theme.text_muted_color || defaultTheme.text_muted_color,
+          border_color: payload.theme.border_color || defaultTheme.border_color,
+          button_style: payload.theme.button_style || defaultTheme.button_style,
+          button_radius: payload.theme.button_radius || defaultTheme.button_radius,
+          card_radius: payload.theme.card_radius || defaultTheme.card_radius,
+          image_radius: payload.theme.image_radius || defaultTheme.image_radius,
+          heading_font: payload.theme.heading_font || defaultTheme.heading_font,
+          body_font: payload.theme.body_font || defaultTheme.body_font,
+          accent_font: payload.theme.accent_font || defaultTheme.accent_font,
+        });
+      }
+      if (type === "site_preview_clear") {
+        setPreviewTheme(null);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   const updateThemeFromPayload = (data: Record<string, unknown>) => {
@@ -110,25 +142,26 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
     if (!mounted) return;
 
     const root = document.documentElement;
+    const activeTheme = previewTheme || theme;
 
     // Colors
-    root.style.setProperty("--site-primary", theme.primary_color);
-    root.style.setProperty("--site-secondary", theme.secondary_color);
-    root.style.setProperty("--site-accent", theme.accent_color);
-    root.style.setProperty("--site-background", theme.background_color);
-    root.style.setProperty("--site-text", theme.text_color);
-    root.style.setProperty("--site-text-muted", theme.text_muted_color);
-    root.style.setProperty("--site-border", theme.border_color);
+    root.style.setProperty("--site-primary", activeTheme.primary_color);
+    root.style.setProperty("--site-secondary", activeTheme.secondary_color);
+    root.style.setProperty("--site-accent", activeTheme.accent_color);
+    root.style.setProperty("--site-background", activeTheme.background_color);
+    root.style.setProperty("--site-text", activeTheme.text_color);
+    root.style.setProperty("--site-text-muted", activeTheme.text_muted_color);
+    root.style.setProperty("--site-border", activeTheme.border_color);
 
     // Styles
-    root.style.setProperty("--site-button-radius", theme.button_radius);
-    root.style.setProperty("--site-card-radius", theme.card_radius);
-    root.style.setProperty("--site-image-radius", theme.image_radius);
+    root.style.setProperty("--site-button-radius", activeTheme.button_radius);
+    root.style.setProperty("--site-card-radius", activeTheme.card_radius);
+    root.style.setProperty("--site-image-radius", activeTheme.image_radius);
 
     // Update body background
-    document.body.style.backgroundColor = theme.background_color;
-    document.body.style.color = theme.text_color;
-  }, [theme, mounted]);
+    document.body.style.backgroundColor = activeTheme.background_color;
+    document.body.style.color = activeTheme.text_color;
+  }, [theme, previewTheme, mounted]);
 
   return (
     <SiteThemeContext.Provider value={theme}>
