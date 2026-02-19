@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 // Routes that require authentication
 const PROTECTED_ROUTES = ['/admin'];
 // Routes that are only for unauthenticated users
-const AUTH_ROUTES = ['/admin/login'];
+const AUTH_ROUTES = ['/login'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
 
   // Redirect unauthenticated users to login
   if (isProtectedRoute && !user) {
-    const loginUrl = new URL('/admin/login', request.url);
+    const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }

@@ -33,9 +33,9 @@ export default async function AdminLayout({
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    // The middleware handles the redirect, but this is a fallback
+    // Redirect to login if not authenticated
     if (!user) {
-      redirect("/admin/login");
+      redirect("/login");
     }
 
     return (
@@ -48,6 +48,6 @@ export default async function AdminLayout({
     );
   } catch (error) {
     console.error("Admin layout error:", error);
-    redirect("/admin/login");
+    redirect("/login");
   }
 }
