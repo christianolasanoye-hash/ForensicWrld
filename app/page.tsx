@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import SectionPreview from "@/components/SectionPreview";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
