@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import { SiteThemeProvider } from "@/components/SiteThemeProvider";
 
 export default function LayoutWrapper({
   children,
@@ -16,11 +17,16 @@ export default function LayoutWrapper({
   const isLoginRoute = pathname === "/login";
   const hideNavFooter = isAdminRoute || isLoginRoute;
 
+  // Wrap public pages with SiteThemeProvider for real-time theme updates
+  if (hideNavFooter) {
+    return <main>{children}</main>;
+  }
+
   return (
-    <>
-      {!hideNavFooter && <Nav />}
+    <SiteThemeProvider>
+      <Nav />
       <main>{children}</main>
-      {!hideNavFooter && <Footer />}
-    </>
+      <Footer />
+    </SiteThemeProvider>
   );
 }

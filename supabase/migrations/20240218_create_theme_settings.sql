@@ -60,3 +60,34 @@ CREATE POLICY "Anyone can view theme settings"
 CREATE POLICY "Authenticated users can update theme settings"
   ON theme_settings FOR UPDATE
   USING (auth.role() = 'authenticated');
+
+-- Background media library table
+CREATE TABLE IF NOT EXISTS background_media (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  url TEXT NOT NULL,
+  type VARCHAR(10) NOT NULL CHECK (type IN ('video', 'image')),
+  name VARCHAR(255) NOT NULL,
+  is_active BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS for background_media
+ALTER TABLE background_media ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view background media
+CREATE POLICY "Anyone can view background media"
+  ON background_media FOR SELECT
+  USING (true);
+
+-- Authenticated users can manage background media
+CREATE POLICY "Authenticated users can insert background media"
+  ON background_media FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can update background media"
+  ON background_media FOR UPDATE
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can delete background media"
+  ON background_media FOR DELETE
+  USING (auth.role() = 'authenticated');

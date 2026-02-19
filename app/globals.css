@@ -3,6 +3,27 @@
 :root {
   --background: #000000;
   --foreground: #ffffff;
+
+  /* Site theme defaults (overridden by SiteThemeProvider) */
+  --site-primary: #FFFFFF;
+  --site-secondary: #000000;
+  --site-accent: #FFFFFF;
+  --site-background: #000000;
+  --site-text: #FFFFFF;
+  --site-text-muted: #999999;
+  --site-border: #333333;
+  --site-button-radius: 0px;
+  --site-card-radius: 0px;
+  --site-image-radius: 0px;
+
+  /* Admin theme defaults (overridden by AdminThemeProvider) */
+  --admin-bg: #000000;
+  --admin-sidebar: #000000;
+  --admin-card: #111111;
+  --admin-accent: #FFFFFF;
+  --admin-text: #FFFFFF;
+  --admin-text-muted: #666666;
+  --admin-border: #222222;
 }
 
 @theme inline {
