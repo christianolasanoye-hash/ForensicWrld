@@ -115,14 +115,22 @@ export default function BlogPostPage() {
       }
 
       // Regular paragraph with inline formatting
-      let text = paragraph;
+      // SECURITY: First escape HTML entities to prevent XSS, then apply markdown
+      let text = paragraph
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+      // Now safely apply markdown transformations on escaped text
       // Bold
       text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
       // Italic
       text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      // Links
+      // Links - validate URL protocol to prevent javascript: URLs
       text = text.replace(
-        /\[([^\]]+)\]\(([^)]+)\)/g,
+        /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
         '<a href="$2" class="underline hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">$1</a>'
       );
 

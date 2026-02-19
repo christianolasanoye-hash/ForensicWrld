@@ -16,14 +16,22 @@ export default function IntakePage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    service: "Film campaigns",
+    service: "film",
     details: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const services = ["Film campaigns", "Photography", "Social marketing", "Events", "Mentorship", "Merch (drops)"];
+  // Service options with internal value and display label
+  const services = [
+    { value: "film", label: "Film Campaigns" },
+    { value: "photography", label: "Photography" },
+    { value: "social", label: "Social Marketing" },
+    { value: "events", label: "Events" },
+    { value: "mentorship", label: "Mentorship" },
+    { value: "other", label: "Merch / Other" },
+  ];
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,7 +55,7 @@ export default function IntakePage() {
       }
 
       setSubmitted(true);
-      setForm({ name: "", email: "", service: "Film campaigns", details: "" });
+      setForm({ name: "", email: "", service: "film", details: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit intake. Please try again.");
     } finally {
@@ -101,8 +109,8 @@ export default function IntakePage() {
                 required
               >
                 {services.map((s) => (
-                  <option key={s} value={s} className="bg-black text-white">
-                    {s.toUpperCase()}
+                  <option key={s.value} value={s.value} className="bg-black text-white">
+                    {s.label.toUpperCase()}
                   </option>
                 ))}
               </Select>

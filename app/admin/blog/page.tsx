@@ -125,10 +125,25 @@ export default function BlogAdminPage() {
       .map((t) => t.trim())
       .filter((t) => t);
 
+    const slug = formData.slug || generateSlug(formData.title);
+
+    // Check for slug uniqueness
+    const { data: existingPost } = await supabase
+      .from("blog_posts")
+      .select("id")
+      .eq("slug", slug)
+      .single();
+
+    if (existingPost && existingPost.id !== editingPost?.id) {
+      setMessage("A post with this slug already exists. Please use a different slug.");
+      setSaving(false);
+      return;
+    }
+
     const postData = {
       ...formData,
       tags,
-      slug: formData.slug || generateSlug(formData.title),
+      slug,
       published_at:
         formData.status === "published" && !formData.published_at
           ? new Date().toISOString()

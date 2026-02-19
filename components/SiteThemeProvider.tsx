@@ -141,7 +141,7 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Apply CSS variables when theme changes
+  // Apply CSS variables and inject font styles when theme changes
   useEffect(() => {
     if (!mounted) return;
 
@@ -176,33 +176,60 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
     // Update body background
     document.body.style.backgroundColor = activeTheme.background_color;
     document.body.style.color = activeTheme.text_color;
+
+    // Inject font face rules and font overrides
+    const formatMap: Record<string, string> = {
+      'ttf': 'truetype',
+      'otf': 'opentype',
+      'woff': 'woff',
+      'woff2': 'woff2',
+    };
+
+    const fontFaceRules = (activeTheme.custom_fonts || [])
+      .map((font) => {
+        const format = formatMap[font.format] || font.format;
+        return `@font-face { font-family: '${font.name}'; src: url('${font.url}') format('${format}'); font-display: swap; }`;
+      })
+      .join("\n");
+
+    const styleId = "site-theme-fonts";
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    styleEl.textContent = `
+      ${fontFaceRules}
+      body {
+        font-family: ${bodyFont}, Arial, Helvetica, sans-serif !important;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: ${headingFont} !important;
+      }
+      p {
+        font-family: ${bodyFont}, Arial, Helvetica, sans-serif !important;
+      }
+      .font-polar {
+        font-family: ${accentFont} !important;
+      }
+      .font-giants {
+        font-family: ${headingFont} !important;
+      }
+    `;
+
+    // Cleanup on unmount
+    return () => {
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
   }, [theme, previewTheme, mounted]);
 
-  const activeForFonts = previewTheme || theme;
-  const fontFaces = (activeForFonts.custom_fonts || [])
-    .map(
-      (font) =>
-        `@font-face { font-family: '${font.name}'; src: url('${font.url}') format('${font.format}'); font-display: swap; }`
-    )
-    .join("\n");
-
   return (
-    <SiteThemeContext.Provider value={theme}>
-      <style jsx global>{`
-        ${fontFaces}
-        :root {
-          --site-primary: ${theme.primary_color};
-          --site-secondary: ${theme.secondary_color};
-          --site-accent: ${theme.accent_color};
-          --site-background: ${theme.background_color};
-          --site-text: ${theme.text_color};
-          --site-text-muted: ${theme.text_muted_color};
-          --site-border: ${theme.border_color};
-          --site-button-radius: ${theme.button_radius};
-          --site-card-radius: ${theme.card_radius};
-          --site-image-radius: ${theme.image_radius};
-        }
-      `}</style>
+    <SiteThemeContext.Provider value={previewTheme || theme}>
       {children}
     </SiteThemeContext.Provider>
   );

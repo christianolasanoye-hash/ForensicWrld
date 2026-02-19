@@ -40,14 +40,19 @@ export default function GalleryManagement() {
 
   const fetchGallery = async () => {
     setLoading(true);
-    const { data } = await supabase
+    setMessage("");
+
+    const { data, error } = await supabase
       .from("gallery_assets")
       .select("*")
       .eq("category", selectedCategory)
       .order("order_index")
       .order("created_at", { ascending: false });
 
-    if (data) {
+    if (error) {
+      setMessage("Failed to load gallery items. Please refresh the page.");
+      console.error("Gallery fetch error:", error);
+    } else if (data) {
       setItems(data);
     }
     setLoading(false);

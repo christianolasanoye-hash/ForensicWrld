@@ -85,14 +85,20 @@ export async function requireAuth(redirectTo: string = '/admin/login'): Promise<
 export async function isAdmin(): Promise<boolean> {
   const user = await getServerUser();
 
-  if (!user) {
+  if (!user || !user.email) {
     return false;
   }
 
   // Check if user email is in admin list
   // In production, you'd check a database field or role
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
-  return adminEmails.includes(user.email || '');
+  const adminEmailsEnv = process.env.ADMIN_EMAILS;
+  if (!adminEmailsEnv) {
+    console.warn('ADMIN_EMAILS environment variable is not set. Denying admin access.');
+    return false;
+  }
+
+  const adminEmails = adminEmailsEnv.split(',').map(email => email.trim().toLowerCase());
+  return adminEmails.includes(user.email.toLowerCase());
 }
 
 /**
@@ -100,10 +106,15 @@ export async function isAdmin(): Promise<boolean> {
  * Redirects to home if not admin
  */
 export async function requireAdmin(): Promise<User> {
-  const user = await requireAuth('/admin/login');
+  const user = await requireAuth('/login');
 
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
-  if (!adminEmails.includes(user.email || '')) {
+  const adminEmailsEnv = process.env.ADMIN_EMAILS;
+  if (!adminEmailsEnv || !user.email) {
+    redirect('/');
+  }
+
+  const adminEmails = adminEmailsEnv.split(',').map(email => email.trim().toLowerCase());
+  if (!adminEmails.includes(user.email.toLowerCase())) {
     redirect('/');
   }
 
