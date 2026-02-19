@@ -498,11 +498,14 @@ export default function ThemePage() {
         url: urlData.publicUrl,
         format: ext,
       };
-
+      const nextFonts = [...(settings.custom_fonts || []), newFont];
       setSettings((prev) => ({
         ...prev,
-        custom_fonts: [...(prev.custom_fonts || []), newFont],
+        custom_fonts: nextFonts,
       }));
+      if (settings.id) {
+        await supabase.from("theme_settings").update({ custom_fonts: nextFonts }).eq("id", settings.id);
+      }
       setMessage("Font uploaded. Select it in Typography.");
     } catch (err) {
       setMessage("Font upload error: " + (err as Error).message);
@@ -521,10 +524,14 @@ export default function ThemePage() {
       if (path) {
         await supabase.storage.from("media").remove([path]);
       }
+      const nextFonts = (settings.custom_fonts || []).filter((f) => f.id !== fontId);
       setSettings((prev) => ({
         ...prev,
-        custom_fonts: (prev.custom_fonts || []).filter((f) => f.id !== fontId),
+        custom_fonts: nextFonts,
       }));
+      if (settings.id) {
+        await supabase.from("theme_settings").update({ custom_fonts: nextFonts }).eq("id", settings.id);
+      }
       setMessage("Font removed");
     } catch (err) {
       setMessage("Font remove error: " + (err as Error).message);
