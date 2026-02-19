@@ -58,7 +58,7 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "theme_settings" },
-        (payload) => {
+        (payload: { new: Record<string, unknown> | null }) => {
           if (payload.new) {
             updateThemeFromPayload(payload.new);
           }

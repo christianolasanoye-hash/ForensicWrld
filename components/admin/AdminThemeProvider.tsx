@@ -44,7 +44,7 @@ export function AdminThemeProvider({ children }: { children: ReactNode }) {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "theme_settings" },
-        (payload) => {
+        (payload: { new: Record<string, string> | null }) => {
           if (payload.new) {
             setTheme({
               admin_bg_color: payload.new.admin_bg_color || defaultTheme.admin_bg_color,
