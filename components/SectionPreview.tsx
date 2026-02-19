@@ -70,11 +70,10 @@ export default function SectionPreview({ items, sectionSlug, showVideos = false,
         {isPreview ? (
           <div className="block h-full w-full" aria-label={`Preview ${sectionSlug} works`}>
             {media[0]?.type === "image" ? (
-              <Image
+              <img
                 src={media[0].url}
                 alt={`${sectionSlug} featured work - ${media[0].caption || 'Portfolio item'}`}
-                fill
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
             ) : (
               <video
@@ -120,11 +119,10 @@ export default function SectionPreview({ items, sectionSlug, showVideos = false,
             <div className="block h-full w-full" aria-label={`Preview ${sectionSlug} secondary work`}>
               {media[1] ? (
                 media[1].type === "image" ? (
-                  <Image
+                  <img
                     src={media[1].url}
                     alt={`${sectionSlug} portfolio image 2`}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 ) : (
                   <video src={media[1].url} className="h-full w-full object-cover" autoPlay muted loop playsInline aria-label={`${sectionSlug} work video 2`} />
@@ -179,11 +177,10 @@ export default function SectionPreview({ items, sectionSlug, showVideos = false,
             <div className="block h-full w-full" aria-label={`Preview ${sectionSlug} tertiary work`}>
               {media[2] ? (
                 media[2].type === "image" ? (
-                  <Image
+                  <img
                     src={media[2].url}
                     alt={`${sectionSlug} portfolio image 3`}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 ) : (
                   <video src={media[2].url} className="h-full w-full object-cover" autoPlay muted loop playsInline aria-label={`${sectionSlug} work video 3`} />
