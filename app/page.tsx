@@ -4,7 +4,6 @@ export const dynamic = "force-dynamic";
 
 import SectionPreview from "@/components/SectionPreview";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -36,8 +35,7 @@ const defaultSections: SectionItem[] = [];
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const searchParams = useSearchParams();
-  const isPreview = searchParams?.get("preview") === "1";
+  const [isPreview, setIsPreview] = useState(false);
   const [sectionMedia, setSectionMedia] = useState<Record<string, MediaItem[]>>({});
 
 
@@ -50,6 +48,11 @@ export default function Home() {
   const [sectionList, setSectionList] = useState<SectionItem[]>(defaultSections);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setIsPreview(params.get("preview") === "1");
+    }
+
     if (videoRef.current) {
       videoRef.current.play().catch(() => { });
     }
