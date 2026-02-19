@@ -7,20 +7,47 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Check if Supabase is configured
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // The middleware handles the redirect, but this is a fallback
-  if (!user) {
-    redirect("/admin/login");
+  if (!supabaseUrl || !supabaseKey) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Configuration Required</h1>
+          <p className="text-white/60 mb-4">
+            Supabase environment variables are not configured. Please add the following to your Vercel environment:
+          </p>
+          <ul className="text-left text-sm text-white/40 space-y-2 bg-white/5 p-4 border border-white/10">
+            <li>NEXT_PUBLIC_SUPABASE_URL</li>
+            <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
+            <li>ADMIN_EMAILS</li>
+          </ul>
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="min-h-screen bg-black flex">
-      <AdminSidebar userEmail={user.email || ""} />
-      <main className="flex-1 ml-64 p-8">
-        {children}
-      </main>
-    </div>
-  );
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // The middleware handles the redirect, but this is a fallback
+    if (!user) {
+      redirect("/admin/login");
+    }
+
+    return (
+      <div className="min-h-screen bg-black flex">
+        <AdminSidebar userEmail={user.email || ""} />
+        <main className="flex-1 ml-64 p-8">
+          {children}
+        </main>
+      </div>
+    );
+  } catch (error) {
+    console.error("Admin layout error:", error);
+    redirect("/admin/login");
+  }
 }
