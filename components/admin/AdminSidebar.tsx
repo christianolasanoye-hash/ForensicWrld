@@ -22,6 +22,7 @@ const navItems = [
   { href: "/admin/outreach", label: "Outreach", icon: "◯" },
   { href: "/admin/links", label: "Social Links", icon: "◰" },
   { href: "/admin/seo", label: "SEO & Social", icon: "◲" },
+  { href: "/admin/theme", label: "Theme & Design", icon: "◐" },
   { href: "/admin/settings", label: "Settings", icon: "◱" },
 ];
 
@@ -32,7 +33,7 @@ export default function AdminSidebar({ userEmail }: AdminSidebarProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/admin/login");
+    router.push("/login");
     router.refresh();
   };
 

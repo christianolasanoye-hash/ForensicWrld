@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import Nav from "@/components/Nav";
-import Footer from "@/components/Footer";
+import LayoutWrapper from "@/components/LayoutWrapper";
 import Analytics from "@/components/Analytics";
 import { createClient } from "@supabase/supabase-js";
 
@@ -98,11 +97,7 @@ export default function RootLayout({
         className={`${jamday.variable} ${polarVortex.variable} ${giants.variable} font-sans antialiased min-h-screen bg-black text-white`}
       >
         <Analytics />
-        <Nav />
-        <main className="">
-          {children}
-        </main>
-        <Footer />
+        <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
   );
