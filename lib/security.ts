@@ -173,7 +173,18 @@ export const securityHeaders = {
  */
 export function isAllowedFileType(
   mimeType: string,
-  allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime']
+  allowedTypes: string[] = [
+    // Images
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    // Favicon formats
+    'image/x-icon', 'image/vnd.microsoft.icon',
+    // Videos
+    'video/mp4', 'video/quicktime', 'video/webm',
+    // Fonts
+    'font/ttf', 'font/otf', 'font/woff', 'font/woff2',
+    'application/x-font-ttf', 'application/x-font-otf',
+    'application/font-woff', 'application/font-woff2',
+  ]
 ): boolean {
   return allowedTypes.includes(mimeType);
 }

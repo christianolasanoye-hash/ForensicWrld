@@ -157,6 +157,70 @@ const themePresets = [
   },
 ];
 
+// Admin-only presets (only affects dashboard colors)
+const adminPresets = [
+  {
+    name: "Admin Dark",
+    theme: {
+      admin_bg_color: "#000000",
+      admin_sidebar_color: "#0A0A0A",
+      admin_accent_color: "#FFFFFF",
+      admin_text_color: "#FFFFFF",
+      admin_border_color: "#1A1A1A",
+    },
+  },
+  {
+    name: "Admin Slate",
+    theme: {
+      admin_bg_color: "#0F172A",
+      admin_sidebar_color: "#020617",
+      admin_accent_color: "#3B82F6",
+      admin_text_color: "#F8FAFC",
+      admin_border_color: "#1E293B",
+    },
+  },
+  {
+    name: "Admin Zinc",
+    theme: {
+      admin_bg_color: "#18181B",
+      admin_sidebar_color: "#09090B",
+      admin_accent_color: "#A1A1AA",
+      admin_text_color: "#FAFAFA",
+      admin_border_color: "#27272A",
+    },
+  },
+  {
+    name: "Admin Purple",
+    theme: {
+      admin_bg_color: "#1E1B4B",
+      admin_sidebar_color: "#0F0D29",
+      admin_accent_color: "#A78BFA",
+      admin_text_color: "#F5F3FF",
+      admin_border_color: "#312E81",
+    },
+  },
+  {
+    name: "Admin Rose",
+    theme: {
+      admin_bg_color: "#1C1917",
+      admin_sidebar_color: "#0C0A09",
+      admin_accent_color: "#FB7185",
+      admin_text_color: "#FFF1F2",
+      admin_border_color: "#292524",
+    },
+  },
+  {
+    name: "Admin Light",
+    theme: {
+      admin_bg_color: "#FAFAFA",
+      admin_sidebar_color: "#FFFFFF",
+      admin_accent_color: "#18181B",
+      admin_text_color: "#09090B",
+      admin_border_color: "#E4E4E7",
+    },
+  },
+];
+
 const defaultContent: Record<string, string> = {
   hero_title: "CREATE\nYOUR\nWORLD",
   hero_subtitle: "WE HELP ARTISTS AND BRANDS MANIFEST THEIR VISION THROUGH HIGH-FIDELITY CONTENT AND STRATEGIC POSITIONING.",
@@ -485,9 +549,16 @@ export default function ThemePage() {
     setUploadingFont(true);
     try {
       const fileName = `fonts/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const contentTypeMap: Record<string, string> = {
+        ttf: "font/ttf",
+        otf: "font/otf",
+        woff: "font/woff",
+        woff2: "font/woff2",
+      };
+      const contentType = contentTypeMap[ext] || file.type || "application/octet-stream";
       const { data: uploadData, error } = await supabase.storage
         .from("media")
-        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+        .upload(fileName, file, { cacheControl: "3600", upsert: false, contentType });
       if (error) throw error;
 
       const { data: urlData } = supabase.storage.from("media").getPublicUrl(uploadData.path);
@@ -1162,6 +1233,28 @@ WORLD"
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
             Admin Panel Colors
           </h3>
+          <div className="mb-4">
+            <div className="text-[9px] uppercase tracking-widest text-white/40 mb-2">Dashboard Presets</div>
+            <div className="flex flex-wrap gap-2">
+              {adminPresets.map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => {
+                    setSettings((prev) => ({ ...prev, ...preset.theme }));
+                    setMessage(`Applied "${preset.name}" - click Save to apply`);
+                    setTimeout(() => setMessage(""), 3000);
+                  }}
+                  className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest border border-white/20 hover:border-white/40 transition-colors flex items-center gap-2"
+                >
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: preset.theme.admin_accent_color }}
+                  />
+                  {preset.name.replace("Admin ", "")}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <ColorPicker label="Background" value={settings.admin_bg_color} onChange={(v) => updateColor("admin_bg_color", v)} />
             <ColorPicker label="Sidebar" value={settings.admin_sidebar_color} onChange={(v) => updateColor("admin_sidebar_color", v)} />
