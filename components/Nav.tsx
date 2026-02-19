@@ -21,6 +21,7 @@ const navItems = [
 export default function Nav() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [isPreview, setIsPreview] = useState(false);
   const supabase = getSupabaseClient();
   const [headerContent, setHeaderContent] = useState({
     header_brand_primary: "FORENSIC",
@@ -30,6 +31,11 @@ export default function Nav() {
   });
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setIsPreview(params.get("preview") === "1");
+    }
+
     async function fetchHeaderContent() {
       const { data } = await supabase
         .from("site_content")
@@ -51,6 +57,14 @@ export default function Nav() {
 
     fetchHeaderContent();
   }, []);
+
+  const sendPreviewEdit = (key: string, value: string) => {
+    if (!isPreview) return;
+    window.parent?.postMessage(
+      { type: "site_preview_edit", payload: { kind: "content", key, value } },
+      window.location.origin
+    );
+  };
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -80,10 +94,22 @@ export default function Nav() {
             aria-label="Go to home"
           >
             <span className="font-giants text-2xl italic font-black uppercase tracking-tighter leading-none">
-              {headerContent.header_brand_primary}
+              <span
+                contentEditable={isPreview}
+                suppressContentEditableWarning
+                onBlur={(e) => sendPreviewEdit("header_brand_primary", e.currentTarget.innerText)}
+              >
+                {headerContent.header_brand_primary}
+              </span>
             </span>
             <span className="font-polar text-[10px] tracking-[0.4em] text-white/50 -mt-1">
-              {headerContent.header_brand_secondary}
+              <span
+                contentEditable={isPreview}
+                suppressContentEditableWarning
+                onBlur={(e) => sendPreviewEdit("header_brand_secondary", e.currentTarget.innerText)}
+              >
+                {headerContent.header_brand_secondary}
+              </span>
             </span>
           </Link>
 
@@ -105,9 +131,28 @@ export default function Nav() {
           <div className="flex items-center gap-4">
             <Link href={headerContent.header_cta_link || "/intake"} className="hidden sm:block">
               <span className="text-[11px] font-bold uppercase tracking-[0.2em] border border-white/20 px-4 py-2 hover:bg-white hover:text-black transition-all">
-                {headerContent.header_cta_text || "Book Intake"}
+                <span
+                  contentEditable={isPreview}
+                  suppressContentEditableWarning
+                  onBlur={(e) => sendPreviewEdit("header_cta_text", e.currentTarget.innerText)}
+                >
+                  {headerContent.header_cta_text || "Book Intake"}
+                </span>
               </span>
             </Link>
+            {isPreview && (
+              <input
+                type="text"
+                value={headerContent.header_cta_link || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setHeaderContent((prev) => ({ ...prev, header_cta_link: value }));
+                  sendPreviewEdit("header_cta_link", value);
+                }}
+                className="hidden sm:block bg-transparent border border-white/20 px-2 py-1 text-[9px] uppercase tracking-widest text-white/60 w-32"
+                placeholder="/intake"
+              />
+            )}
             <button
               className="lg:hidden text-white/50 hover:text-white transition-colors"
               onClick={() => setIsOpen(!isOpen)}

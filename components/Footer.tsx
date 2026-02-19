@@ -6,6 +6,7 @@ import { getSupabaseClient } from "@/lib/supabase-client";
 
 export default function Footer() {
   const supabase = getSupabaseClient();
+  const [isPreview, setIsPreview] = useState(false);
   const [footerContent, setFooterContent] = useState({
     footer_tagline: "MANIFESTING THE NEXT ERA OF CULTURE THROUGH IMMERSIVE VISUALS AND STRATEGIC CREATIVE DIRECTION.",
     footer_location_1: "NYC",
@@ -15,6 +16,11 @@ export default function Footer() {
   });
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setIsPreview(params.get("preview") === "1");
+    }
+
     async function fetchFooterContent() {
       const { data } = await supabase
         .from("site_content")
@@ -37,6 +43,14 @@ export default function Footer() {
 
     fetchFooterContent();
   }, []);
+
+  const sendPreviewEdit = (key: string, value: string) => {
+    if (!isPreview) return;
+    window.parent?.postMessage(
+      { type: "site_preview_edit", payload: { kind: "content", key, value } },
+      window.location.origin
+    );
+  };
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -72,7 +86,13 @@ export default function Footer() {
               <span className="font-polar text-[10px] tracking-[0.4em] text-white/50 -mt-1">WRLD STUDIO</span>
             </Link>
             <p className="text-white/40 text-xs uppercase tracking-widest leading-relaxed">
-              {footerContent.footer_tagline}
+              <span
+                contentEditable={isPreview}
+                suppressContentEditableWarning
+                onBlur={(e) => sendPreviewEdit("footer_tagline", e.currentTarget.innerText)}
+              >
+                {footerContent.footer_tagline}
+              </span>
             </p>
           </div>
 
@@ -99,12 +119,42 @@ export default function Footer() {
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-12 border-t border-white/5">
             <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase text-center sm:text-left">
-              {copyrightText}
+              <span
+                contentEditable={isPreview}
+                suppressContentEditableWarning
+                onBlur={(e) => sendPreviewEdit("footer_copyright", e.currentTarget.innerText)}
+              >
+                {copyrightText}
+              </span>
             </span>
             <div className="flex gap-8">
-            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">{footerContent.footer_location_1}</span>
-            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">{footerContent.footer_location_2}</span>
-            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">{footerContent.footer_location_3}</span>
+            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">
+              <span
+                contentEditable={isPreview}
+                suppressContentEditableWarning
+                onBlur={(e) => sendPreviewEdit("footer_location_1", e.currentTarget.innerText)}
+              >
+                {footerContent.footer_location_1}
+              </span>
+            </span>
+            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">
+              <span
+                contentEditable={isPreview}
+                suppressContentEditableWarning
+                onBlur={(e) => sendPreviewEdit("footer_location_2", e.currentTarget.innerText)}
+              >
+                {footerContent.footer_location_2}
+              </span>
+            </span>
+            <span className="font-polar text-[8px] tracking-[0.5em] text-white/20 uppercase">
+              <span
+                contentEditable={isPreview}
+                suppressContentEditableWarning
+                onBlur={(e) => sendPreviewEdit("footer_location_3", e.currentTarget.innerText)}
+              >
+                {footerContent.footer_location_3}
+              </span>
+            </span>
             </div>
         </div>
       </div>

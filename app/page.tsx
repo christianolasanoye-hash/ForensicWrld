@@ -174,6 +174,50 @@ export default function Home() {
     }
   };
 
+  const replaceSectionMedia = async (mediaId: string, file: File) => {
+    try {
+      const isVideo = file.type.startsWith("video/");
+      const isImage = file.type.startsWith("image/");
+      if (!isVideo && !isImage) return;
+
+      const fileName = `gallery/replace/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(uploadData.path);
+
+      const { data: updated, error: updateError } = await supabase
+        .from("gallery_assets")
+        .update({
+          url: urlData.publicUrl,
+          type: isVideo ? "video" : "image",
+          filename: file.name,
+        })
+        .eq("id", mediaId)
+        .select()
+        .single();
+      if (updateError) throw updateError;
+
+      if (updated) {
+        setSectionMedia((prev) => {
+          const next: Record<string, MediaItem[]> = { ...prev };
+          Object.keys(next).forEach((key) => {
+            next[key] = next[key].map((item) =>
+              item.id === mediaId
+                ? { ...item, url: updated.url, type: updated.type as "image" | "video" }
+                : item
+            );
+          });
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error("Error replacing section media:", err);
+    }
+  };
+
   const reorderSections = (dragId: string, dropId: string) => {
     if (!dragId || !dropId || dragId === dropId) return;
     setSectionList((prev) => {
@@ -198,6 +242,35 @@ export default function Home() {
       }
       dragRafRef.current = null;
     });
+  };
+
+  const addSectionPreview = () => {
+    const nextIndex = sectionList.length + 1;
+    const stamp = Date.now();
+    const slug = `new-section-${stamp}`;
+    const tempId = `temp_${stamp}`;
+    const newSection: SectionItem = {
+      id: tempId,
+      slug,
+      title: "New Section",
+      description: "",
+      tagline: "",
+      cta_text: "",
+      cta_link: "",
+      order_index: nextIndex,
+      link: `/${slug}`,
+    };
+    setSectionList((prev) => [...prev, newSection]);
+    sendPreviewUpdate({ kind: "section_add", section: newSection });
+  };
+
+  const deleteSectionPreview = (id?: string) => {
+    if (!id) return;
+    setSectionList((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      return next.map((s, idx) => ({ ...s, order_index: idx + 1 }));
+    });
+    sendPreviewUpdate({ kind: "section_delete", id });
   };
 
   useEffect(() => {
@@ -344,6 +417,22 @@ export default function Home() {
                 }
               }}
             >
+              {isPreview && (
+                <div className="absolute left-6 top-6 z-20 flex items-center gap-2">
+                  <span className="text-[9px] uppercase tracking-widest border border-white/20 px-2 py-1 bg-black/60 cursor-move">
+                    Drag
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteSectionPreview(section.id);
+                    }}
+                    className="text-[9px] uppercase tracking-widest border border-red-500/30 px-2 py-1 text-red-400 hover:bg-red-500/10"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
               <div className="max-w-[1400px] mx-auto">
                 <div className="flex flex-col lg:flex-row gap-20">
                   {/* Text Side */}
@@ -437,6 +526,7 @@ export default function Home() {
                       showVideos={section.slug === "film"}
                       isPreview={isPreview}
                       onAddMedia={addSectionMedia}
+                      onReplaceMedia={replaceSectionMedia}
                     />
                   </div>
                 </div>
@@ -451,6 +541,17 @@ export default function Home() {
             </section>
           ))}
         </div>
+
+        {isPreview && (
+          <div className="py-10 flex justify-center border-t border-white/5">
+            <button
+              onClick={addSectionPreview}
+              className="text-[10px] uppercase tracking-widest border border-white/20 px-4 py-2 hover:border-white/40"
+            >
+              + Add Section
+            </button>
+          </div>
+        )}
 
         {/* Final CTA */}
         <section className="py-40 px-6 sm:px-12 bg-white text-black">

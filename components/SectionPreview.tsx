@@ -16,11 +16,20 @@ interface SectionPreviewProps {
   showVideos?: boolean;
   isPreview?: boolean;
   onAddMedia?: (sectionSlug: string, file: File) => void;
+  onReplaceMedia?: (mediaId: string, file: File) => void;
 }
 
-export default function SectionPreview({ items, sectionSlug, showVideos = false, isPreview = false, onAddMedia }: SectionPreviewProps) {
+export default function SectionPreview({
+  items,
+  sectionSlug,
+  showVideos = false,
+  isPreview = false,
+  onAddMedia,
+  onReplaceMedia,
+}: SectionPreviewProps) {
   const media = [...items].slice(0, 3);
   const canAdd = isPreview && typeof onAddMedia === "function";
+  const canReplace = isPreview && typeof onReplaceMedia === "function";
 
   if (media.length === 0) {
     return (
@@ -67,6 +76,21 @@ export default function SectionPreview({ items, sectionSlug, showVideos = false,
     <div className="grid grid-cols-12 gap-4 h-[400px] sm:h-[600px]">
       {/* Main Large Item */}
       <div className="col-span-8 h-full relative group overflow-hidden bg-white/5">
+        {canReplace && media[0]?.id && (
+          <label className="absolute top-2 right-2 z-10 text-[9px] uppercase tracking-widest bg-black/60 border border-white/20 px-2 py-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+            Replace
+            <input
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onReplaceMedia(media[0].id, file);
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+        )}
         {isPreview ? (
           <div className="block h-full w-full" aria-label={`Preview ${sectionSlug} works`}>
             {media[0]?.type === "image" ? (
@@ -115,6 +139,21 @@ export default function SectionPreview({ items, sectionSlug, showVideos = false,
       <div className="col-span-4 flex flex-col gap-4">
         {/* Secondary Medium Item */}
         <div className="flex-1 relative group overflow-hidden bg-white/5">
+          {canReplace && media[1]?.id && (
+            <label className="absolute top-2 right-2 z-10 text-[9px] uppercase tracking-widest bg-black/60 border border-white/20 px-2 py-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+              Replace
+              <input
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onReplaceMedia(media[1].id, file);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+          )}
           {isPreview ? (
             <div className="block h-full w-full" aria-label={`Preview ${sectionSlug} secondary work`}>
               {media[1] ? (
@@ -173,6 +212,21 @@ export default function SectionPreview({ items, sectionSlug, showVideos = false,
 
         {/* Third Small Item or Placeholder */}
         <div className="h-1/3 relative group overflow-hidden bg-white/5">
+          {canReplace && media[2]?.id && (
+            <label className="absolute top-2 right-2 z-10 text-[9px] uppercase tracking-widest bg-black/60 border border-white/20 px-2 py-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+              Replace
+              <input
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onReplaceMedia(media[2].id, file);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+          )}
           {isPreview ? (
             <div className="block h-full w-full" aria-label={`Preview ${sectionSlug} tertiary work`}>
               {media[2] ? (

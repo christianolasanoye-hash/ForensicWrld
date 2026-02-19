@@ -143,6 +143,14 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
 
     const root = document.documentElement;
     const activeTheme = previewTheme || theme;
+    const fontMap: Record<string, string> = {
+      "Giants": "var(--font-giants)",
+      "Polar Vortex": "var(--font-polar)",
+      "Jamday": "var(--font-jamday)",
+    };
+    const headingFont = fontMap[activeTheme.heading_font] || "var(--font-giants)";
+    const bodyFont = fontMap[activeTheme.body_font] || "var(--font-jamday)";
+    const accentFont = fontMap[activeTheme.accent_font] || "var(--font-polar)";
 
     // Colors
     root.style.setProperty("--site-primary", activeTheme.primary_color);
@@ -157,6 +165,9 @@ export function SiteThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--site-button-radius", activeTheme.button_radius);
     root.style.setProperty("--site-card-radius", activeTheme.card_radius);
     root.style.setProperty("--site-image-radius", activeTheme.image_radius);
+    root.style.setProperty("--site-font-heading", headingFont);
+    root.style.setProperty("--site-font-body", bodyFont);
+    root.style.setProperty("--site-font-accent", accentFont);
 
     // Update body background
     document.body.style.backgroundColor = activeTheme.background_color;

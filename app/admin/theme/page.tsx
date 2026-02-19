@@ -26,6 +26,10 @@ interface ThemeSettings {
   text_color: string;
   text_muted_color: string;
   border_color: string;
+  // Typography
+  heading_font: string;
+  body_font: string;
+  accent_font: string;
   // Admin Colors
   admin_bg_color: string;
   admin_sidebar_color: string;
@@ -67,6 +71,9 @@ const defaultTheme: ThemeSettings = {
   text_color: "#FFFFFF",
   text_muted_color: "#999999",
   border_color: "#333333",
+  heading_font: "Giants",
+  body_font: "Polar Vortex",
+  accent_font: "Jamday",
   admin_bg_color: "#000000",
   admin_sidebar_color: "#0A0A0A",
   admin_accent_color: "#FFFFFF",
@@ -74,6 +81,12 @@ const defaultTheme: ThemeSettings = {
   admin_border_color: "#1A1A1A",
   button_radius: "0px",
 };
+
+const fontOptions = [
+  { label: "Giants", value: "Giants" },
+  { label: "Polar Vortex", value: "Polar Vortex" },
+  { label: "Jamday", value: "Jamday" },
+];
 
 const themePresets = [
   {
@@ -169,6 +182,8 @@ export default function ThemePage() {
   const [sections, setSections] = useState<SectionItem[]>([]);
   const [backgroundMedia, setBackgroundMedia] = useState<BackgroundMedia[]>([]);
   const [activeBackground, setActiveBackground] = useState<BackgroundMedia | null>(null);
+  const [deletedSectionIds, setDeletedSectionIds] = useState<string[]>([]);
+  const [previewWide, setPreviewWide] = useState(false);
   const [versions, setVersions] = useState<SiteVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -215,6 +230,21 @@ export default function ThemePage() {
           const remaining = prev.filter((s) => !payload.order.includes(s.id));
           return [...ordered, ...remaining];
         });
+      }
+
+      if (payload.kind === "section_add" && payload.section) {
+        setSections((prev) => {
+          const next = [...prev, payload.section as SectionItem];
+          return next.map((s, idx) => ({ ...s, order_index: idx + 1 }));
+        });
+      }
+
+      if (payload.kind === "section_delete" && payload.id) {
+        const id = String(payload.id);
+        setSections((prev) => prev.filter((s) => s.id !== id));
+        if (!id.startsWith("temp_")) {
+          setDeletedSectionIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+        }
       }
     };
 
@@ -371,8 +401,44 @@ export default function ThemePage() {
       }));
       await supabase.from("site_content").upsert(contentRecords, { onConflict: "key" });
 
+      const existingSections = sections.filter((s) => s.id && !s.id.startsWith("temp_"));
+      const newSections = sections.filter((s) => s.id && s.id.startsWith("temp_"));
+
+      if (deletedSectionIds.length > 0) {
+        await supabase.from("sections").delete().in("id", deletedSectionIds);
+        setDeletedSectionIds([]);
+      }
+
+      if (newSections.length > 0) {
+        const { data: inserted, error: insertError } = await supabase
+          .from("sections")
+          .insert(
+            newSections.map((section) => ({
+              slug: section.slug,
+              title: section.title,
+              description: section.description,
+              tagline: section.tagline,
+              cta_text: section.cta_text,
+              cta_link: section.cta_link,
+              order_index: section.order_index,
+            }))
+          )
+          .select();
+        if (insertError) throw insertError;
+        if (inserted && inserted.length > 0) {
+          const tempMap = new Map(newSections.map((s, idx) => [s.id, inserted[idx]?.id]));
+          setSections((prev) =>
+            prev.map((s) =>
+              s.id && s.id.startsWith("temp_") && tempMap.get(s.id)
+                ? { ...s, id: tempMap.get(s.id) as string }
+                : s
+            )
+          );
+        }
+      }
+
       await Promise.all(
-        sections.map((section) =>
+        existingSections.map((section) =>
           supabase
             .from("sections")
             .update({
@@ -598,7 +664,7 @@ export default function ThemePage() {
   return (
     <div className="flex gap-8">
       {/* Left Panel - Controls */}
-      <div className="flex-1 space-y-8 max-w-2xl">
+      <div className="flex-1 space-y-8 max-w-3xl min-w-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-giants italic font-black uppercase tracking-tighter text-white">
@@ -950,6 +1016,48 @@ WORLD"
           </div>
         </div>
 
+        {/* Typography */}
+        <div className="border border-white/10 p-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
+            Typography
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Field label="Heading Font">
+              <select
+                value={settings.heading_font}
+                onChange={(e) => updateColor("heading_font", e.target.value)}
+                className="w-full bg-transparent border border-white/20 px-3 py-2 text-white text-sm"
+              >
+                {fontOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Body Font">
+              <select
+                value={settings.body_font}
+                onChange={(e) => updateColor("body_font", e.target.value)}
+                className="w-full bg-transparent border border-white/20 px-3 py-2 text-white text-sm"
+              >
+                {fontOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Accent Font">
+              <select
+                value={settings.accent_font}
+                onChange={(e) => updateColor("accent_font", e.target.value)}
+                className="w-full bg-transparent border border-white/20 px-3 py-2 text-white text-sm"
+              >
+                {fontOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </div>
+
         {/* Admin Colors */}
         <div className="border border-white/10 p-4">
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
@@ -984,12 +1092,20 @@ WORLD"
       </div>
 
       {/* Right Panel - Live Preview */}
-      <div className="w-[520px] flex-shrink-0">
+      <div className={`${previewWide ? "w-[720px]" : "w-[520px]"} flex-shrink-0 transition-all duration-200`}>
         <div className="sticky top-8 space-y-6">
           <div>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-4">
-              Live Site Preview
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                Live Site Preview
+              </h3>
+              <button
+                onClick={() => setPreviewWide((v) => !v)}
+                className="text-[9px] uppercase tracking-widest border border-white/20 px-2 py-1 hover:border-white/40"
+              >
+                {previewWide ? "Shrink" : "Expand"}
+              </button>
+            </div>
             <div className="border border-white/10 overflow-hidden bg-black">
               <iframe
                 key={previewKey}
