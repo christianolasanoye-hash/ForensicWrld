@@ -3,6 +3,7 @@
 import SectionPreview from "@/components/SectionPreview";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 interface MediaItem {
