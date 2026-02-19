@@ -40,9 +40,9 @@ export default function BlogPage() {
       .order("published_at", { ascending: false });
 
     if (data && !error) {
-      const featured = data.find((p) => p.is_featured) || data[0];
+      const featured = data.find((p: BlogPost) => p.is_featured) || data[0];
       setFeaturedPost(featured || null);
-      setPosts(data.filter((p) => p.id !== featured?.id));
+      setPosts(data.filter((p: BlogPost) => p.id !== featured?.id));
     }
     setLoading(false);
   };
