@@ -174,6 +174,8 @@ export default function ThemePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [backgroundUrl, setBackgroundUrl] = useState("");
+  const [addingUrl, setAddingUrl] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [previewReady, setPreviewReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -504,6 +506,36 @@ export default function ThemePage() {
 
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleBackgroundUrlAdd = async () => {
+    const url = backgroundUrl.trim();
+    if (!url) return;
+    setAddingUrl(true);
+    try {
+      const lower = url.toLowerCase();
+      const isVideo = lower.endsWith(".mp4") || lower.endsWith(".mov") || lower.endsWith(".webm");
+      const { data: mediaData, error } = await supabase
+        .from("background_media")
+        .insert({
+          url,
+          type: isVideo ? "video" : "image",
+          name: url.split("/").pop() || "background",
+          is_active: false,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (mediaData) {
+        setBackgroundMedia((prev) => [mediaData as BackgroundMedia, ...prev]);
+        setMessage("Added! Click on it to set as active.");
+      }
+      setBackgroundUrl("");
+    } catch (err) {
+      setMessage("URL error: " + (err as Error).message);
+    }
+    setAddingUrl(false);
   };
 
   const setBackgroundActive = async (media: BackgroundMedia | null) => {
@@ -843,6 +875,18 @@ WORLD"
                 </span>
               </label>
             </div>
+          </div>
+          <div className="mb-4 flex gap-2">
+            <input
+              type="text"
+              value={backgroundUrl}
+              onChange={(e) => setBackgroundUrl(e.target.value)}
+              placeholder="Paste image/video URL"
+              className="flex-1 bg-transparent border border-white/20 px-3 py-2 text-[10px] text-white/80 focus:outline-none"
+            />
+            <Button onClick={handleBackgroundUrlAdd} disabled={addingUrl || !backgroundUrl.trim()}>
+              {addingUrl ? "ADDING..." : "ADD URL"}
+            </Button>
           </div>
 
           {activeBackground ? (

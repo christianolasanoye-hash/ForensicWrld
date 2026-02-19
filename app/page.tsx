@@ -35,6 +35,8 @@ const defaultSections: SectionItem[] = [];
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const dragIdRef = useRef<string | null>(null);
+  const dragRafRef = useRef<number | null>(null);
   const [isPreview, setIsPreview] = useState(false);
   const [sectionMedia, setSectionMedia] = useState<Record<string, MediaItem[]>>({});
 
@@ -132,6 +134,46 @@ export default function Home() {
     window.parent?.postMessage({ type: "site_preview_edit", payload }, window.location.origin);
   };
 
+  const addSectionMedia = async (sectionSlug: string, file: File) => {
+    try {
+      const isVideo = file.type.startsWith("video/");
+      const isImage = file.type.startsWith("image/");
+      if (!isVideo && !isImage) return;
+
+      const fileName = `gallery/${sectionSlug}/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(uploadData.path);
+
+      const { data: mediaRow, error: insertError } = await supabase
+        .from("gallery_assets")
+        .insert({
+          category: sectionSlug,
+          type: isVideo ? "video" : "image",
+          url: urlData.publicUrl,
+          filename: file.name,
+        })
+        .select()
+        .single();
+      if (insertError) throw insertError;
+
+      if (mediaRow) {
+        setSectionMedia((prev) => ({
+          ...prev,
+          [sectionSlug]: [
+            { id: mediaRow.id, url: mediaRow.url, type: mediaRow.type, caption: mediaRow.caption || undefined },
+            ...(prev[sectionSlug] || []),
+          ],
+        }));
+      }
+    } catch (err) {
+      console.error("Error adding section media:", err);
+    }
+  };
+
   const reorderSections = (dragId: string, dropId: string) => {
     if (!dragId || !dropId || dragId === dropId) return;
     setSectionList((prev) => {
@@ -144,6 +186,17 @@ export default function Home() {
       const updated = next.map((s, idx) => ({ ...s, order_index: idx + 1 }));
       sendPreviewUpdate({ kind: "sections_order", order: updated.map((s) => s.id) });
       return updated;
+    });
+  };
+
+  const scheduleReorder = (dropId: string) => {
+    if (!dragIdRef.current || !dropId || dragIdRef.current === dropId) return;
+    if (dragRafRef.current) return;
+    dragRafRef.current = requestAnimationFrame(() => {
+      if (dragIdRef.current) {
+        reorderSections(dragIdRef.current, dropId);
+      }
+      dragRafRef.current = null;
     });
   };
 
@@ -265,17 +318,30 @@ export default function Home() {
           {sectionList.map((section, idx) => (
             <section
               key={section.slug}
-              className="relative py-32 sm:py-48 px-6 sm:px-12 border-t border-white/5"
+              className="relative py-32 sm:py-48 px-6 sm:px-12 border-t border-white/5 transition-all duration-200"
               draggable={isPreview}
               onDragStart={(e) => {
                 if (!section.id) return;
+                dragIdRef.current = section.id;
                 e.dataTransfer.setData("text/plain", section.id);
               }}
-              onDragOver={(e) => isPreview && e.preventDefault()}
+              onDragOver={(e) => {
+                if (!isPreview || !section.id) return;
+                e.preventDefault();
+                scheduleReorder(section.id);
+              }}
               onDrop={(e) => {
                 if (!isPreview || !section.id) return;
                 const dragId = e.dataTransfer.getData("text/plain");
                 reorderSections(dragId, section.id);
+                dragIdRef.current = null;
+              }}
+              onDragEnd={() => {
+                dragIdRef.current = null;
+                if (dragRafRef.current) {
+                  cancelAnimationFrame(dragRafRef.current);
+                  dragRafRef.current = null;
+                }
               }}
             >
               <div className="max-w-[1400px] mx-auto">
@@ -368,6 +434,9 @@ export default function Home() {
                     <SectionPreview
                       items={sectionMedia[section.slug] || []}
                       sectionSlug={section.slug}
+                      showVideos={section.slug === "film"}
+                      isPreview={isPreview}
+                      onAddMedia={addSectionMedia}
                     />
                   </div>
                 </div>
