@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS theme_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  -- Color settings
+  -- Site Color settings
   primary_color VARCHAR(7) DEFAULT '#FFFFFF',
   secondary_color VARCHAR(7) DEFAULT '#000000',
   accent_color VARCHAR(7) DEFAULT '#FFFFFF',
@@ -10,6 +10,15 @@ CREATE TABLE IF NOT EXISTS theme_settings (
   text_color VARCHAR(7) DEFAULT '#FFFFFF',
   text_muted_color VARCHAR(7) DEFAULT '#999999',
   border_color VARCHAR(7) DEFAULT '#333333',
+
+  -- Admin Dashboard Colors
+  admin_bg_color VARCHAR(7) DEFAULT '#000000',
+  admin_sidebar_color VARCHAR(7) DEFAULT '#000000',
+  admin_card_color VARCHAR(7) DEFAULT '#111111',
+  admin_accent_color VARCHAR(7) DEFAULT '#FFFFFF',
+  admin_text_color VARCHAR(7) DEFAULT '#FFFFFF',
+  admin_text_muted_color VARCHAR(7) DEFAULT '#666666',
+  admin_border_color VARCHAR(7) DEFAULT '#222222',
 
   -- Font settings
   heading_font VARCHAR(255) DEFAULT 'Giants',

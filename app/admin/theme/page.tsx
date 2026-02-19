@@ -15,7 +15,7 @@ interface CustomFont {
 
 interface ThemeSettings {
   id?: string;
-  // Colors
+  // Site Colors
   primary_color: string;
   secondary_color: string;
   accent_color: string;
@@ -23,6 +23,14 @@ interface ThemeSettings {
   text_color: string;
   text_muted_color: string;
   border_color: string;
+  // Admin Colors
+  admin_bg_color: string;
+  admin_sidebar_color: string;
+  admin_card_color: string;
+  admin_accent_color: string;
+  admin_text_color: string;
+  admin_text_muted_color: string;
+  admin_border_color: string;
   // Fonts
   heading_font: string;
   body_font: string;
@@ -36,6 +44,7 @@ interface ThemeSettings {
 }
 
 const defaultSettings: ThemeSettings = {
+  // Site colors
   primary_color: "#FFFFFF",
   secondary_color: "#000000",
   accent_color: "#FFFFFF",
@@ -43,10 +52,20 @@ const defaultSettings: ThemeSettings = {
   text_color: "#FFFFFF",
   text_muted_color: "#999999",
   border_color: "#333333",
+  // Admin colors
+  admin_bg_color: "#000000",
+  admin_sidebar_color: "#000000",
+  admin_card_color: "#111111",
+  admin_accent_color: "#FFFFFF",
+  admin_text_color: "#FFFFFF",
+  admin_text_muted_color: "#666666",
+  admin_border_color: "#222222",
+  // Fonts
   heading_font: "Giants",
   body_font: "Polar Vortex",
   accent_font: "Jamday",
   custom_fonts: [],
+  // Styles
   button_style: "solid",
   button_radius: "0px",
   card_radius: "0px",
@@ -64,7 +83,7 @@ export default function ThemePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<"colors" | "fonts" | "styles">("colors");
+  const [activeTab, setActiveTab] = useState<"colors" | "admin" | "fonts" | "styles">("colors");
   const [uploadingFont, setUploadingFont] = useState(false);
   const fontInputRef = useRef<HTMLInputElement>(null);
 
@@ -210,7 +229,8 @@ export default function ThemePage() {
   };
 
   const tabs = [
-    { id: "colors", label: "Colors" },
+    { id: "colors", label: "Site Colors" },
+    { id: "admin", label: "Admin Theme" },
     { id: "fonts", label: "Typography" },
     { id: "styles", label: "Styles" },
   ] as const;
@@ -348,6 +368,172 @@ export default function ThemePage() {
               >
                 Button Preview
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Theme Tab */}
+      {activeTab === "admin" && (
+        <div className="space-y-8">
+          <div className="p-4 border border-yellow-500/30 bg-yellow-500/10 text-[10px] font-bold uppercase tracking-widest text-yellow-400 mb-6">
+            These colors apply to the admin dashboard you&apos;re currently viewing
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ColorField
+              label="Background"
+              hint="Main admin background"
+              value={settings.admin_bg_color}
+              onChange={(v) => updateField("admin_bg_color", v)}
+            />
+            <ColorField
+              label="Sidebar"
+              hint="Sidebar background color"
+              value={settings.admin_sidebar_color}
+              onChange={(v) => updateField("admin_sidebar_color", v)}
+            />
+            <ColorField
+              label="Cards"
+              hint="Card and panel backgrounds"
+              value={settings.admin_card_color}
+              onChange={(v) => updateField("admin_card_color", v)}
+            />
+            <ColorField
+              label="Accent"
+              hint="Active states and highlights"
+              value={settings.admin_accent_color}
+              onChange={(v) => updateField("admin_accent_color", v)}
+            />
+            <ColorField
+              label="Text"
+              hint="Primary text color"
+              value={settings.admin_text_color}
+              onChange={(v) => updateField("admin_text_color", v)}
+            />
+            <ColorField
+              label="Muted Text"
+              hint="Secondary/muted text"
+              value={settings.admin_text_muted_color}
+              onChange={(v) => updateField("admin_text_muted_color", v)}
+            />
+            <ColorField
+              label="Borders"
+              hint="Borders and dividers"
+              value={settings.admin_border_color}
+              onChange={(v) => updateField("admin_border_color", v)}
+            />
+          </div>
+
+          {/* Admin Preview */}
+          <div className="border-t border-white/10 pt-8">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-4">
+              Preview
+            </h3>
+            <div className="flex gap-4 max-w-3xl">
+              {/* Sidebar Preview */}
+              <div
+                className="w-48 p-4 flex-shrink-0"
+                style={{
+                  backgroundColor: settings.admin_sidebar_color,
+                  borderRight: `1px solid ${settings.admin_border_color}`,
+                }}
+              >
+                <div
+                  className="text-sm font-bold mb-4"
+                  style={{ color: settings.admin_text_color }}
+                >
+                  FORENSIC
+                </div>
+                <div className="space-y-2">
+                  <div
+                    className="px-3 py-2 text-[10px] uppercase tracking-widest"
+                    style={{
+                      backgroundColor: settings.admin_accent_color + "20",
+                      color: settings.admin_text_color,
+                      borderLeft: `2px solid ${settings.admin_accent_color}`,
+                    }}
+                  >
+                    Dashboard
+                  </div>
+                  <div
+                    className="px-3 py-2 text-[10px] uppercase tracking-widest"
+                    style={{ color: settings.admin_text_muted_color }}
+                  >
+                    Gallery
+                  </div>
+                  <div
+                    className="px-3 py-2 text-[10px] uppercase tracking-widest"
+                    style={{ color: settings.admin_text_muted_color }}
+                  >
+                    Settings
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Content Preview */}
+              <div
+                className="flex-1 p-6"
+                style={{ backgroundColor: settings.admin_bg_color }}
+              >
+                <h4
+                  className="text-xl font-bold mb-4"
+                  style={{ color: settings.admin_text_color }}
+                >
+                  Dashboard
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className="p-4"
+                    style={{
+                      backgroundColor: settings.admin_card_color,
+                      border: `1px solid ${settings.admin_border_color}`,
+                    }}
+                  >
+                    <div
+                      className="text-[10px] uppercase tracking-widest mb-1"
+                      style={{ color: settings.admin_text_muted_color }}
+                    >
+                      Total Views
+                    </div>
+                    <div
+                      className="text-2xl font-bold"
+                      style={{ color: settings.admin_text_color }}
+                    >
+                      12,345
+                    </div>
+                  </div>
+                  <div
+                    className="p-4"
+                    style={{
+                      backgroundColor: settings.admin_card_color,
+                      border: `1px solid ${settings.admin_border_color}`,
+                    }}
+                  >
+                    <div
+                      className="text-[10px] uppercase tracking-widest mb-1"
+                      style={{ color: settings.admin_text_muted_color }}
+                    >
+                      Submissions
+                    </div>
+                    <div
+                      className="text-2xl font-bold"
+                      style={{ color: settings.admin_text_color }}
+                    >
+                      89
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="mt-4 px-4 py-2 text-[10px] font-bold uppercase tracking-widest"
+                  style={{
+                    backgroundColor: settings.admin_accent_color,
+                    color: settings.admin_bg_color,
+                  }}
+                >
+                  Action Button
+                </button>
+              </div>
             </div>
           </div>
         </div>

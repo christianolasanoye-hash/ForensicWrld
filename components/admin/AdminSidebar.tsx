@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase-client";
+import { useAdminTheme } from "./AdminThemeProvider";
 
 interface AdminSidebarProps {
   userEmail: string;
@@ -30,6 +31,7 @@ export default function AdminSidebar({ userEmail }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = getSupabaseClient();
+  const theme = useAdminTheme();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -38,14 +40,29 @@ export default function AdminSidebar({ userEmail }: AdminSidebarProps) {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-black border-r border-white/10 flex flex-col z-50">
+    <aside
+      className="fixed left-0 top-0 h-screen w-64 flex flex-col z-50"
+      style={{
+        backgroundColor: theme.admin_sidebar_color,
+        borderRight: `1px solid ${theme.admin_border_color}`,
+      }}
+    >
       {/* Header */}
-      <div className="p-6 border-b border-white/10">
+      <div
+        className="p-6"
+        style={{ borderBottom: `1px solid ${theme.admin_border_color}` }}
+      >
         <Link href="/" className="block">
-          <h1 className="font-['Giants_Inline'] text-xl tracking-wider text-white">
+          <h1
+            className="font-['Giants_Inline'] text-xl tracking-wider"
+            style={{ color: theme.admin_text_color }}
+          >
             FORENSIC
           </h1>
-          <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/40">
+          <span
+            className="text-[9px] font-bold uppercase tracking-[0.3em]"
+            style={{ color: theme.admin_text_muted_color }}
+          >
             ADMIN CONSOLE
           </span>
         </Link>
@@ -61,11 +78,12 @@ export default function AdminSidebar({ userEmail }: AdminSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
-                isActive
-                  ? "bg-white/10 text-white border-l-2 border-white"
-                  : "text-white/40 hover:text-white hover:bg-white/5"
-              }`}
+              className="flex items-center gap-3 px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all"
+              style={{
+                backgroundColor: isActive ? `${theme.admin_accent_color}15` : "transparent",
+                color: isActive ? theme.admin_text_color : theme.admin_text_muted_color,
+                borderLeft: isActive ? `2px solid ${theme.admin_accent_color}` : "2px solid transparent",
+              }}
             >
               <span className="text-sm">{item.icon}</span>
               {item.label}
@@ -75,8 +93,14 @@ export default function AdminSidebar({ userEmail }: AdminSidebarProps) {
       </nav>
 
       {/* User Section */}
-      <div className="p-4 border-t border-white/10">
-        <div className="text-[9px] text-white/40 uppercase tracking-widest mb-2 truncate">
+      <div
+        className="p-4"
+        style={{ borderTop: `1px solid ${theme.admin_border_color}` }}
+      >
+        <div
+          className="text-[9px] uppercase tracking-widest mb-2 truncate"
+          style={{ color: theme.admin_text_muted_color }}
+        >
           {userEmail}
         </div>
         <button

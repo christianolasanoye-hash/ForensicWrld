@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminLayoutClient from "@/components/admin/AdminLayoutClient";
 
 export default async function AdminLayout({
   children,
@@ -39,12 +39,9 @@ export default async function AdminLayout({
     }
 
     return (
-      <div className="min-h-screen bg-black flex">
-        <AdminSidebar userEmail={user.email || ""} />
-        <main className="flex-1 ml-64 p-8">
-          {children}
-        </main>
-      </div>
+      <AdminLayoutClient userEmail={user.email || ""}>
+        {children}
+      </AdminLayoutClient>
     );
   } catch (error) {
     console.error("Admin layout error:", error);
