@@ -101,15 +101,15 @@ export default function Home() {
         try {
           if (!supabase) continue;
           const { data, error } = await supabase
-            .from("media")
+            .from("gallery_assets")
             .select("*")
-            .eq("section_slug", section.slug)
+            .eq("category", section.slug)
             .order("order_index", { ascending: true })
             .limit(6);
 
           if (error) throw error;
           if (data && data.length > 0) {
-            const mediaItems: MediaItem[] = data.map((item: any) => ({
+            const mediaItems: MediaItem[] = data.map((item: { id: string; url: string; type: string; caption?: string }) => ({
               id: item.id,
               url: item.url,
               type: item.type as "image" | "video",
