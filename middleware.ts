@@ -16,12 +16,13 @@ export async function middleware(request: NextRequest) {
   // Check if Supabase is configured
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isPreviewFrame = request.nextUrl.searchParams.get("preview") === "1";
 
   // If Supabase is not configured, skip auth checks but still add security headers
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
     // Add security headers
     response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-Frame-Options', isPreviewFrame ? 'SAMEORIGIN' : 'DENY');
     response.headers.set('X-XSS-Protection', '1; mode=block');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     return response;
@@ -80,7 +81,7 @@ export async function middleware(request: NextRequest) {
 
   // Add security headers
   response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Frame-Options', isPreviewFrame ? 'SAMEORIGIN' : 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 

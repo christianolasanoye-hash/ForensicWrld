@@ -185,6 +185,42 @@ export default function ThemePage() {
   }, []);
 
   useEffect(() => {
+    const handlePreviewEdit = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const { type, payload } = event.data || {};
+      if (type !== "site_preview_edit" || !payload) return;
+
+      if (payload.kind === "content" && payload.key) {
+        updateContent(payload.key as string, String(payload.value ?? ""));
+      }
+
+      if (payload.kind === "section" && payload.id && payload.field) {
+        updateSectionField(payload.id as string, {
+          [payload.field as string]: String(payload.value ?? ""),
+        } as Partial<SectionItem>);
+      }
+
+      if (payload.kind === "sections_order" && Array.isArray(payload.order)) {
+        setSections((prev) => {
+          const map = new Map(prev.map((s) => [s.id, s]));
+          const ordered = payload.order
+            .map((id: string, idx: number) => {
+              const s = map.get(id);
+              if (!s) return null;
+              return { ...s, order_index: idx + 1 } as SectionItem;
+            })
+            .filter(Boolean) as SectionItem[];
+          const remaining = prev.filter((s) => !payload.order.includes(s.id));
+          return [...ordered, ...remaining];
+        });
+      }
+    };
+
+    window.addEventListener("message", handlePreviewEdit);
+    return () => window.removeEventListener("message", handlePreviewEdit);
+  }, [sections]);
+
+  useEffect(() => {
     if (!previewReady) return;
     const timeout = setTimeout(() => {
       sendPreview();
@@ -440,7 +476,7 @@ export default function ThemePage() {
     try {
       const fileName = `background/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
       const { data: uploadData, error } = await supabase.storage
-        .from("assets")
+        .from("media")
         .upload(fileName, file);
 
       if (error) throw error;
@@ -508,7 +544,7 @@ export default function ThemePage() {
     if (!confirm("Delete this media?")) return;
 
     try {
-      const path = media.url.split("/assets/")[1];
+      const path = media.url.split("/media/")[1];
       if (path) await supabase.storage.from("media").remove([path]);
       await supabase.from("background_media").delete().eq("id", media.id);
       setBackgroundMedia((prev) => prev.filter((m) => m.id !== media.id));

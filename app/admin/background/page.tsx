@@ -73,7 +73,7 @@ export default function BackgroundMediaPage() {
     try {
       const fileName = `background/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("assets")
+        .from("media")
         .upload(fileName, file, {
           cacheControl: "3600",
           upsert: false,
@@ -82,7 +82,7 @@ export default function BackgroundMediaPage() {
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("assets")
+        .from("media")
         .getPublicUrl(uploadData.path);
 
       // Add to database
@@ -151,7 +151,7 @@ export default function BackgroundMediaPage() {
 
     try {
       // Delete from storage
-      const path = media.url.split("/assets/")[1];
+      const path = media.url.split("/media/")[1];
       if (path) {
         await supabase.storage.from("media").remove([path]);
       }

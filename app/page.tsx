@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import SectionPreview from "@/components/SectionPreview";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface MediaItem {
@@ -33,6 +33,8 @@ const defaultSections: SectionItem[] = [];
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const searchParams = useSearchParams();
+  const isPreview = searchParams?.get("preview") === "1";
   const [sectionMedia, setSectionMedia] = useState<Record<string, MediaItem[]>>({});
 
 
@@ -119,6 +121,26 @@ export default function Home() {
     fetchMedia(sectionList);
   }, [sectionList]);
 
+  const sendPreviewUpdate = (payload: Record<string, unknown>) => {
+    if (!isPreview) return;
+    window.parent?.postMessage({ type: "site_preview_edit", payload }, window.location.origin);
+  };
+
+  const reorderSections = (dragId: string, dropId: string) => {
+    if (!dragId || !dropId || dragId === dropId) return;
+    setSectionList((prev) => {
+      const next = [...prev];
+      const fromIndex = next.findIndex((s) => s.id === dragId);
+      const toIndex = next.findIndex((s) => s.id === dropId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      const updated = next.map((s, idx) => ({ ...s, order_index: idx + 1 }));
+      sendPreviewUpdate({ kind: "sections_order", order: updated.map((s) => s.id) });
+      return updated;
+    });
+  };
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
@@ -195,7 +217,14 @@ export default function Home() {
         {(heroContent.title || heroContent.subtitle) && (
         <section className="h-screen flex flex-col justify-end px-6 pb-20 sm:px-12 sm:pb-32">
           <div className="max-w-[1400px] mx-auto w-full">
-            <h1 className="text-[14vw] sm:text-[12vw] leading-[0.85] font-giants italic font-black uppercase tracking-tighter mb-8 whitespace-pre-line">
+            <h1
+              className="text-[14vw] sm:text-[12vw] leading-[0.85] font-giants italic font-black uppercase tracking-tighter mb-8 whitespace-pre-line"
+              contentEditable={isPreview}
+              suppressContentEditableWarning
+              onBlur={(e) =>
+                sendPreviewUpdate({ kind: "content", key: "hero_title", value: e.currentTarget.innerText })
+              }
+            >
               {heroContent.title.includes('\n') ? (
                 heroContent.title.split('\n').map((line, i, arr) => (
                   <span key={i}>
@@ -209,7 +238,14 @@ export default function Home() {
             </h1>
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-12">
               {heroContent.subtitle && (
-                <p className="max-w-md text-sm sm:text-lg text-white/60 font-medium leading-relaxed uppercase tracking-wider">
+                <p
+                  className="max-w-md text-sm sm:text-lg text-white/60 font-medium leading-relaxed uppercase tracking-wider"
+                  contentEditable={isPreview}
+                  suppressContentEditableWarning
+                  onBlur={(e) =>
+                    sendPreviewUpdate({ kind: "content", key: "hero_subtitle", value: e.currentTarget.innerText })
+                  }
+                >
                   {heroContent.subtitle}
                 </p>
               )}
@@ -221,7 +257,21 @@ export default function Home() {
         {/* Feature Sections */}
         <div className="bg-black">
           {sectionList.map((section, idx) => (
-            <section key={section.slug} className="relative py-32 sm:py-48 px-6 sm:px-12 border-t border-white/5">
+            <section
+              key={section.slug}
+              className="relative py-32 sm:py-48 px-6 sm:px-12 border-t border-white/5"
+              draggable={isPreview}
+              onDragStart={(e) => {
+                if (!section.id) return;
+                e.dataTransfer.setData("text/plain", section.id);
+              }}
+              onDragOver={(e) => isPreview && e.preventDefault()}
+              onDrop={(e) => {
+                if (!isPreview || !section.id) return;
+                const dragId = e.dataTransfer.getData("text/plain");
+                reorderSections(dragId, section.id);
+              }}
+            >
               <div className="max-w-[1400px] mx-auto">
                 <div className="flex flex-col lg:flex-row gap-20">
                   {/* Text Side */}
@@ -230,23 +280,77 @@ export default function Home() {
                       <span className="font-giants italic text-4xl text-white/20">0{idx + 1}</span>
                       <div>
                         {section.title && (
-                          <h2 className="text-6xl sm:text-7xl font-giants italic font-black uppercase tracking-tighter mb-6">
+                          <h2
+                            className="text-6xl sm:text-7xl font-giants italic font-black uppercase tracking-tighter mb-6"
+                            contentEditable={isPreview}
+                            suppressContentEditableWarning
+                            onBlur={(e) =>
+                              section.id &&
+                              sendPreviewUpdate({
+                                kind: "section",
+                                id: section.id,
+                                field: "title",
+                                value: e.currentTarget.innerText,
+                              })
+                            }
+                          >
                             {section.title}
                           </h2>
                         )}
                         {section.tagline && (
-                          <div className="text-[11px] uppercase tracking-[0.3em] text-white/40 mb-3">
+                          <div
+                            className="text-[11px] uppercase tracking-[0.3em] text-white/40 mb-3"
+                            contentEditable={isPreview}
+                            suppressContentEditableWarning
+                            onBlur={(e) =>
+                              section.id &&
+                              sendPreviewUpdate({
+                                kind: "section",
+                                id: section.id,
+                                field: "tagline",
+                                value: e.currentTarget.innerText,
+                              })
+                            }
+                          >
                             {section.tagline}
                           </div>
                         )}
                         {section.description && (
-                          <p className="text-white/50 text-sm sm:text-base leading-relaxed mb-10 max-w-sm">
+                          <p
+                            className="text-white/50 text-sm sm:text-base leading-relaxed mb-10 max-w-sm"
+                            contentEditable={isPreview}
+                            suppressContentEditableWarning
+                            onBlur={(e) =>
+                              section.id &&
+                              sendPreviewUpdate({
+                                kind: "section",
+                                id: section.id,
+                                field: "description",
+                                value: e.currentTarget.innerText,
+                              })
+                            }
+                          >
                             {section.description}
                           </p>
                         )}
                         {(section.cta_text || section.cta_link) && (
                           <Link href={(section.cta_link && section.cta_link.trim()) || section.link || `/${section.slug}`} className="inline-flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.2em] group">
-                            {section.cta_text || "View"} <span className="w-12 h-[1px] bg-white/20 group-hover:w-20 group-hover:bg-white transition-all" />
+                            <span
+                              contentEditable={isPreview}
+                              suppressContentEditableWarning
+                              onBlur={(e) =>
+                                section.id &&
+                                sendPreviewUpdate({
+                                  kind: "section",
+                                  id: section.id,
+                                  field: "cta_text",
+                                  value: e.currentTarget.innerText,
+                                })
+                              }
+                            >
+                              {section.cta_text || "View"}
+                            </span>
+                            <span className="w-12 h-[1px] bg-white/20 group-hover:w-20 group-hover:bg-white transition-all" />
                           </Link>
                         )}
                       </div>
