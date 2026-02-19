@@ -182,3 +182,40 @@ CREATE POLICY "Public can read social links" ON social_links
 CREATE POLICY "Authenticated users can manage social links" ON social_links
   FOR ALL USING (auth.role() = 'authenticated');
 
+-- =====================================================
+-- BLOG POSTS TABLE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  excerpt TEXT,
+  content TEXT NOT NULL,
+  featured_image_url TEXT,
+  category TEXT,
+  tags TEXT[],
+  author_name TEXT DEFAULT 'Forensic Wrld',
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+  is_featured BOOLEAN DEFAULT false,
+  published_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create index for fast slug lookups
+CREATE INDEX IF NOT EXISTS blog_posts_slug_idx ON blog_posts(slug);
+CREATE INDEX IF NOT EXISTS blog_posts_status_idx ON blog_posts(status);
+CREATE INDEX IF NOT EXISTS blog_posts_published_at_idx ON blog_posts(published_at DESC);
+
+-- Enable RLS
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access for published posts
+CREATE POLICY "Public can read published blog posts" ON blog_posts
+  FOR SELECT USING (status = 'published');
+
+-- Authenticated users can do everything
+CREATE POLICY "Authenticated users can manage blog posts" ON blog_posts
+  FOR ALL USING (auth.role() = 'authenticated');
+

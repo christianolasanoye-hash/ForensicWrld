@@ -10,9 +10,10 @@ interface AdminSidebarProps {
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: "◉" },
+  { href: "/admin/blog", label: "Blog", icon: "◳" },
+  { href: "/admin/events", label: "Events", icon: "◫" },
   { href: "/admin/content", label: "Site Content", icon: "◈" },
   { href: "/admin/gallery", label: "Gallery", icon: "◧" },
-  { href: "/admin/events", label: "Events", icon: "◫" },
   { href: "/admin/merch", label: "Merch", icon: "◪" },
   { href: "/admin/models", label: "Model Team", icon: "◩" },
   { href: "/admin/influencers", label: "Influencers", icon: "◬" },

@@ -10,6 +10,7 @@ const navItems = [
   { key: "/photography", label: "Photography" },
   { key: "/social", label: "Social" },
   { key: "/events", label: "Events" },
+  { key: "/blog", label: "Blog" },
   { key: "/merch", label: "Merch" },
   { key: "/model-team", label: "Model Team" },
   { key: "/connections", label: "Connections" },
